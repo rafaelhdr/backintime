@@ -1933,6 +1933,7 @@ class ExtraMouseButtonEventFilter(QObject):
             return super(ExtraMouseButtonEventFilter, self) \
                 .eventFilter(receiver, event)
 
+
 class RemoveSnapshotThread(QThread):
     """
     remove snapshots in background thread so GUI will not freeze
@@ -1968,6 +1969,7 @@ class RemoveSnapshotThread(QThread):
         if self.config.inhibitCookie:
             self.config.inhibitCookie = tools.unInhibitSuspend(*self.config.inhibitCookie)
 
+
 class FillTimeLineThread(QThread):
     """
     add snapshot IDs to timeline in background
@@ -1985,6 +1987,7 @@ class FillTimeLineThread(QThread):
 
         self.parent.snapshotsList.sort()
 
+
 class SetupCron(QThread):
     """
     Check crontab entries on startup.
@@ -1996,6 +1999,7 @@ class SetupCron(QThread):
     def run(self):
         self.config.setupCron()
 
+
 def debugTrace():
     """
     Set a tracepoint in the Python debugger that works with Qt
@@ -2003,6 +2007,7 @@ def debugTrace():
     from pdb import set_trace
     pyqtRemoveInputHook()
     set_trace()
+
 
 if __name__ == '__main__':
     cfg = backintime.startApp('backintime-qt')

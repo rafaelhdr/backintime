@@ -48,6 +48,7 @@ RETURN_NO_CFG = 2
 
 parsers = {}
 
+
 def warning_on_take_snapshot(config):
     missing = snapshots.has_missing(config.include())
 
@@ -55,6 +56,7 @@ def warning_on_take_snapshot(config):
         msg = ', '.join(missing)
         msg = f'The following folders are missing: {msg}'
         logger.warning(msg)
+
 
 def takeSnapshotAsync(cfg, checksum = False):
     """
@@ -91,6 +93,7 @@ def takeSnapshotAsync(cfg, checksum = False):
             pass
     subprocess.Popen(cmd, env = env)
 
+
 def takeSnapshot(cfg, force = True):
     """
     Take a new snapshot.
@@ -108,6 +111,7 @@ def takeSnapshot(cfg, force = True):
     ret = snapshots.Snapshots(cfg).backup(force)
     return ret
 
+
 def _mount(cfg):
     """
     Mount external filesystems.
@@ -123,6 +127,7 @@ def _mount(cfg):
     else:
         cfg.setCurrentHashId(hash_id)
 
+
 def _umount(cfg):
     """
     Unmount external filesystems.
@@ -134,6 +139,7 @@ def _umount(cfg):
         mount.Mount(cfg = cfg).umount(cfg.current_hash_id)
     except MountException as ex:
         logger.error(str(ex))
+
 
 def createParsers(app_name = 'backintime'):
     """
@@ -630,6 +636,7 @@ def argParse(args):
 
     return args
 
+
 def printHeader():
     """
     Print application name, version and legal notes.
@@ -642,6 +649,7 @@ def printHeader():
     print('This is free software, and you are welcome to redistribute it')
     print("under certain conditions; type `backintime --license' for details.")
     print('')
+
 
 class PseudoAliasAction(argparse.Action):
     """
@@ -669,6 +677,7 @@ class PseudoAliasAction(argparse.Action):
         setattr(namespace, 'replace', replace)
         setattr(namespace, 'alias', alias)
 
+
 def aliasParser(args):
     """
     Call commands which where given with leading -- for backwards
@@ -685,6 +694,7 @@ def aliasParser(args):
     newArgs = argParse(argv)
     if 'func' in dir(newArgs):
         newArgs.func(newArgs)
+
 
 def getConfig(args, check = True):
     """
@@ -723,6 +733,7 @@ def getConfig(args, check = True):
         cfg.forceUseChecksum = args.checksum
     return cfg
 
+
 def setQuiet(args):
     """
     Redirect :py:data:`sys.stdout` to ``/dev/null`` if ``--quiet`` was set on
@@ -744,6 +755,7 @@ def setQuiet(args):
         atexit.register(force_stdout.close)
     return force_stdout
 
+
 class printLicense(argparse.Action):
     """
     Print custom license
@@ -755,6 +767,7 @@ class printLicense(argparse.Action):
         license_path = pathlib.Path(tools.docPath()) / 'LICENSE'
         print(license_path.read_text('utf-8'))
         sys.exit(RETURN_OK)
+
 
 class printDiagnostics(argparse.Action):
     """
@@ -773,6 +786,7 @@ class printDiagnostics(argparse.Action):
         print(json.dumps(diagnostics, indent=4))
 
         sys.exit(RETURN_OK)
+
 
 def backup(args, force = True):
     """
@@ -793,6 +807,7 @@ def backup(args, force = True):
     ret = takeSnapshot(cfg, force)
     sys.exit(int(ret))
 
+
 def backupJob(args):
     """
     Command for taking a new snapshot in background. Mainly used for cronjobs.
@@ -807,6 +822,7 @@ def backupJob(args):
         SystemExit:     0
     """
     cli.BackupJobDaemon(backup, args).start()
+
 
 def shutdown(args):
     """
@@ -852,6 +868,7 @@ def shutdown(args):
         sd.shutdown()
     sys.exit(RETURN_OK)
 
+
 def snapshotsPath(args):
     """
     Command for printing the full snapshot path of current profile.
@@ -873,6 +890,7 @@ def snapshotsPath(args):
         msg = 'SnapshotsPath: {}'
     print(msg.format(cfg.snapshotsFullPath()), file=force_stdout)
     sys.exit(RETURN_OK)
+
 
 def snapshotsList(args):
     """
@@ -904,6 +922,7 @@ def snapshotsList(args):
         _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def snapshotsListPath(args):
     """
     Command for printing a list of all snapshots paths in current profile.
@@ -934,6 +953,7 @@ def snapshotsListPath(args):
         _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def lastSnapshot(args):
     """
     Command for printing the very last snapshot in current profile.
@@ -959,6 +979,7 @@ def lastSnapshot(args):
         logger.error("There are no snapshots in '%s'" % cfg.profileName())
     _umount(cfg)
     sys.exit(RETURN_OK)
+
 
 def lastSnapshotPath(args):
     """
@@ -988,6 +1009,7 @@ def lastSnapshotPath(args):
         _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def unmount(args):
     """
     Command for unmounting all filesystems.
@@ -1004,6 +1026,7 @@ def unmount(args):
     _mount(cfg)
     _umount(cfg)
     sys.exit(RETURN_OK)
+
 
 def benchmarkCipher(args):
     """
@@ -1027,6 +1050,7 @@ def benchmarkCipher(args):
     else:
         logger.error("SSH is not configured for profile '%s'!" % cfg.profileName())
         sys.exit(RETURN_ERR)
+
 
 def pwCache(args):
     """
@@ -1057,6 +1081,7 @@ def pwCache(args):
     else:
         daemon.run()
     sys.exit(ret)
+
 
 def decode(args):
     """
@@ -1092,6 +1117,7 @@ def decode(args):
     _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def remove(args, force = False):
     """
     Command for removing snapshots.
@@ -1112,6 +1138,7 @@ def remove(args, force = False):
     _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def removeAndDoNotAskAgain(args):
     """
     Command for removing snapshots without asking before remove
@@ -1125,6 +1152,7 @@ def removeAndDoNotAskAgain(args):
         SystemExit:     0
     """
     remove(args, True)
+
 
 def smartRemove(args):
     """
@@ -1159,6 +1187,7 @@ def smartRemove(args):
         logger.error('Smart Remove is not configured.')
         sys.exit(RETURN_NO_CFG)
 
+
 def restore(args):
     """
     Command for restoring files from snapshots.
@@ -1188,6 +1217,7 @@ def restore(args):
     _umount(cfg)
     sys.exit(RETURN_OK)
 
+
 def checkConfig(args):
     """
     Command for checking the config file.
@@ -1214,6 +1244,7 @@ def checkConfig(args):
                  'profile': cfg.profileName()},
               file = force_stdout)
         sys.exit(RETURN_ERR)
+
 
 if __name__ == '__main__':
     startApp()
