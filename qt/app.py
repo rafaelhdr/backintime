@@ -1182,11 +1182,26 @@ class MainWindow(QMainWindow):
                 item = self.timeLine.addSnapshot(sid)
             self.timeLine.checkSelection()
 
+    def validateOnTakeSnapshot(self):
+        hasMissing, missing = snapshots.hasMissing(self.config.include())
+        if hasMissing:
+            msgMissing = '\n'.join(missing)
+            msg = f'{_("The following folders are missing")}:\n\n{msgMissing}\n\n{_("Do you want to proceed?")}'
+            answer = messagebox.warningYesNo(self, msg)
+            return answer == QMessageBox.StandardButton.Yes
+        return True
+
     def btnTakeSnapshotClicked(self):
+        proceed = self.validateOnTakeSnapshot()
+        if not proceed:
+            return
         backintime.takeSnapshotAsync(self.config)
         self.updateTakeSnapshot(True)
 
     def btnTakeSnapshotChecksumClicked(self):
+        proceed = self.validateOnTakeSnapshot()
+        if not proceed:
+            return
         backintime.takeSnapshotAsync(self.config, checksum = True)
         self.updateTakeSnapshot(True)
 

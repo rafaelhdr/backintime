@@ -3104,6 +3104,25 @@ def lastSnapshot(cfg):
         return sids[0]
 
 
+def hasMissing(included):
+    """
+    Check if there are missing files or folders in a snapshot.
+
+    Args:
+        included (list):    list of tuples (item, info)
+
+    Returns:
+        tuple:              (bool, str) where bool is ``True`` if there are
+                            missing files or folders and str is a message
+                            describing the missing files or folders
+    """
+    notFound = []
+    for path, info in included:
+        if not os.path.exists(path):
+            notFound.append(path)
+    return bool(notFound), notFound
+
+
 if __name__ == '__main__':
     config = config.Config()
     snapshots = Snapshots(config)
