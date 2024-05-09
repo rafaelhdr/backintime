@@ -105,7 +105,7 @@ def takeSnapshot(cfg, force = True):
     Returns:
         bool:                   ``True`` if there was an error
     """
-    warningOnTakeSnapshot(cfg)
+    warning_on_take_snapshot(cfg)
     tools.envLoad(cfg.cronEnvFile())
     ret = snapshots.Snapshots(cfg).backup(force)
     return ret
