@@ -56,8 +56,6 @@ def warning_on_take_snapshot(config):
         msg = f'The following folders are missing: {msg}'
         logger.warning(msg)
 
-    return True
-
 def takeSnapshotAsync(cfg, checksum = False):
     """
     Fork a new backintime process with 'backup' command which will
