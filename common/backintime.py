@@ -49,9 +49,9 @@ RETURN_NO_CFG = 2
 parsers = {}
 
 def warning_on_take_snapshot(config):
-    has_missing, missing = snapshots.has_missing(config.include())
-    
-    if has_missing:
+    missing = snapshots.has_missing(config.include())
+
+    if missing:
         msg = ', '.join(missing)
         msg = f'The following folders are missing: {msg}'
         logger.warning(msg)

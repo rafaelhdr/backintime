@@ -3104,7 +3104,7 @@ def lastSnapshot(cfg):
         return sids[0]
 
 
-def hasMissing(included):
+def has_missing(included):
     """
     Check if there are missing files or folders in a snapshot.
 
@@ -3116,11 +3116,11 @@ def hasMissing(included):
                             missing files or folders and str is a message
                             describing the missing files or folders
     """
-    notFound = []
+    not_found = []
     for path, info in included:
         if not os.path.exists(path):
-            notFound.append(path)
-    return bool(notFound), notFound
+            not_found.append(path)
+    return not_found
 
 
 if __name__ == '__main__':

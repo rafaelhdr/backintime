@@ -1724,14 +1724,6 @@ msgstr "AVISO"
 msgid "Exclude {path} from future snapshots?"
 msgstr "Excluir {path} de snapshots futuros?"
 
-#: qt/app.py:1189
-msgid "The following folders are missing"
-msgstr "As seguintes pastas estão faltando"
-
-#: qt/app.py:1189
-msgid "Do you want to proceed?"
-msgstr "Deseja prosseguir?"
-
 #~ msgid " and add your user to group 'fuse'"
 #~ msgstr " e adicionar seu usuário para grupo 'fuse'"
 
