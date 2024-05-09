@@ -1182,7 +1182,7 @@ class MainWindow(QMainWindow):
                 item = self.timeLine.addSnapshot(sid)
             self.timeLine.checkSelection()
 
-    def validateOnTakeSnapshot(self):
+    def validate_on_take_snapshot(self):
         missing = snapshots.has_missing(self.config.include())
         if missing:
             msg_missing = '\n'.join(missing)
@@ -1199,7 +1199,7 @@ class MainWindow(QMainWindow):
         self._take_snapshot_clicked(checksum=True)
 
     def _take_snapshot_clicked(self, checksum):
-        if not self.validateOnTakeSnapshot():
+        if not self.validate_on_take_snapshot():
             return
 
         backintime.takeSnapshotAsync(self.config, checksum=checksum)
