@@ -48,12 +48,14 @@ RETURN_NO_CFG = 2
 
 parsers = {}
 
-def warningOnTakeSnapshot(config):
-    hasMissing, missing = snapshots.hasMissing(config.include())
-    if hasMissing:
-        msgMissing = ', '.join(missing)
-        msg = f'{_("The following folders are missing")}: {msgMissing}'
+def warning_on_take_snapshot(config):
+    has_missing, missing = snapshots.has_missing(config.include())
+    
+    if has_missing:
+        msg = ', '.join(missing)
+        msg = f'The following folders are missing: {msg}'
         logger.warning(msg)
+
     return True
 
 def takeSnapshotAsync(cfg, checksum = False):
