@@ -66,7 +66,7 @@ def takeSnapshotAsync(cfg, checksum = False):
     Args:
         cfg (config.Config): config that should be used
     """
-    warningOnTakeSnapshot(cfg)
+    warning_on_take_snapshot(cfg)
     cmd = []
     if cfg.ioniceOnUser():
         cmd.extend(('ionice', '-c2', '-n7'))
