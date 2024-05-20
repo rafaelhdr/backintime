@@ -707,6 +707,7 @@ class Snapshots:
             msg = ', '.join(missing)
             msg = f'The following folders are missing: {msg}'
             logger.warning(msg)
+            self.setTakeSnapshotMessage(1, msg)
 
     # TODO Refactor: This functions is extremely difficult to understand:
     #  - Nested "if"s
