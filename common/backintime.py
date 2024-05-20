@@ -49,15 +49,6 @@ RETURN_NO_CFG = 2
 parsers = {}
 
 
-def warning_on_take_snapshot(config):
-    missing = snapshots.has_missing(config.include())
-
-    if missing:
-        msg = ', '.join(missing)
-        msg = f'The following folders are missing: {msg}'
-        logger.warning(msg)
-
-
 def takeSnapshotAsync(cfg, checksum = False):
     """
     Fork a new backintime process with 'backup' command which will
@@ -66,7 +57,6 @@ def takeSnapshotAsync(cfg, checksum = False):
     Args:
         cfg (config.Config): config that should be used
     """
-    warning_on_take_snapshot(cfg)
     cmd = []
     if cfg.ioniceOnUser():
         cmd.extend(('ionice', '-c2', '-n7'))
@@ -106,7 +96,6 @@ def takeSnapshot(cfg, force = True):
     Returns:
         bool:                   ``True`` if there was an error
     """
-    warning_on_take_snapshot(cfg)
     tools.envLoad(cfg.cronEnvFile())
     ret = snapshots.Snapshots(cfg).backup(force)
     return ret

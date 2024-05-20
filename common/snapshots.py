@@ -700,6 +700,14 @@ class Snapshots:
 
             return True
 
+    def _warning_on_take_snapshot(self, config):
+        missing = has_missing(config.include())
+
+        if missing:
+            msg = ', '.join(missing)
+            msg = f'The following folders are missing: {msg}'
+            logger.warning(msg)
+
     # TODO Refactor: This functions is extremely difficult to understand:
     #  - Nested "if"s
     #  - Fuzzy names of classes, attributes and methods
@@ -807,6 +815,7 @@ class Snapshots:
                 else:
                     self.config.setCurrentHashId(hash_id)
 
+                self._warning_on_take_snapshot(self.config)
                 include_folders = self.config.include()
 
                 if not include_folders:
