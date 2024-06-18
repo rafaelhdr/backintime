@@ -85,6 +85,9 @@ class SshProxyWidget(QWidget):
             port = ''
             user = ''
 
+        elif isinstance(port, int):
+            port = str(port)
+
         vlayout = QVBoxLayout(self)
         # zero margins
         vlayout.setContentsMargins(0, 0, 0, 0)
@@ -113,9 +116,10 @@ class SshProxyWidget(QWidget):
 
         qttools.set_wrapped_tooltip(
             self,
-            'Connect to the target host via this proxy (also known as a jump '
-            'host). See "-J" in the "ssh" command documentation or '
-            '"ProxyJump" in "ssh_config" man page for details.')
+            _('Connect to the target host via this proxy (also known as a '
+              'jump host). See "-J" in the "ssh" command documentation or '
+              '"ProxyJump" in "ssh_config" man page for details.')
+        )
 
     def _slot_checkbox_changed(self, state):
         if Qt.CheckState(state) == Qt.CheckState.Checked:
@@ -170,7 +174,7 @@ class SettingsDialog(QDialog):
         layout = QHBoxLayout()
         self.mainLayout.addLayout(layout)
 
-        layout.addWidget(QLabel(_('Profile') + ':', self))
+        layout.addWidget(QLabel(_('Profile:'), self))
 
         self.firstUpdateAll = True
         self.disableProfileChanged = True
@@ -212,7 +216,7 @@ class SettingsDialog(QDialog):
         vlayout = QVBoxLayout()
         layout.addLayout(vlayout)
 
-        self.lblModes = QLabel(_('Mode') + ':', self)
+        self.lblModes = QLabel(_('Mode:'), self)
 
         self.comboModes = QComboBox(self)
         hlayout = QHBoxLayout()
@@ -274,34 +278,34 @@ class SettingsDialog(QDialog):
         hlayout3 = QHBoxLayout()
         vlayout.addLayout(hlayout3)
 
-        self.lblSshHost = QLabel(_('Host') + ':', self)
+        self.lblSshHost = QLabel(_('Host:'), self)
         hlayout1.addWidget(self.lblSshHost)
         self.txtSshHost = QLineEdit(self)
         hlayout1.addWidget(self.txtSshHost)
 
-        self.lblSshPort = QLabel(_('Port') + ':', self)
+        self.lblSshPort = QLabel(_('Port:'), self)
         hlayout1.addWidget(self.lblSshPort)
         self.txtSshPort = QLineEdit(self)
         hlayout1.addWidget(self.txtSshPort)
 
-        self.lblSshUser = QLabel(_('User') + ':', self)
+        self.lblSshUser = QLabel(_('User:'), self)
         hlayout1.addWidget(self.lblSshUser)
         self.txtSshUser = QLineEdit(self)
         hlayout1.addWidget(self.txtSshUser)
 
-        self.lblSshPath = QLabel(_('Path') + ':', self)
+        self.lblSshPath = QLabel(_('Path:'), self)
         hlayout2.addWidget(self.lblSshPath)
         self.txtSshPath = QLineEdit(self)
         self.txtSshPath.textChanged.connect(self.fullPathChanged)
         hlayout2.addWidget(self.txtSshPath)
 
-        self.lblSshCipher = QLabel(_('Cipher') + ':', self)
+        self.lblSshCipher = QLabel(_('Cipher:'), self)
         hlayout3.addWidget(self.lblSshCipher)
         self.comboSshCipher = QComboBox(self)
         hlayout3.addWidget(self.comboSshCipher)
         self.fillCombo(self.comboSshCipher, self.config.SSH_CIPHERS)
 
-        self.lblSshPrivateKeyFile = QLabel(_('Private Key') + ':', self)
+        self.lblSshPrivateKeyFile = QLabel(_('Private Key:'), self)
         hlayout3.addWidget(self.lblSshPrivateKeyFile)
         self.txtSshPrivateKeyFile = QLineEdit(self)
         self.txtSshPrivateKeyFile.setReadOnly(True)
@@ -404,25 +408,25 @@ class SettingsDialog(QDialog):
         hlayout2 = QHBoxLayout()
         vlayout2.addLayout(hlayout2)
 
-        self.lblHost = QLabel(_('Host') + ':', self)
+        self.lblHost = QLabel(_('Host:'), self)
         hlayout2.addWidget(self.lblHost)
         self.txtHost = QLineEdit(self)
         self.txtHost.textChanged.connect(self.fullPathChanged)
         hlayout2.addWidget(self.txtHost)
 
-        self.lblUser = QLabel(_('User') + ':', self)
+        self.lblUser = QLabel(_('User:'), self)
         hlayout2.addWidget(self.lblUser)
         self.txtUser = QLineEdit(self)
         self.txtUser.textChanged.connect(self.fullPathChanged)
         hlayout2.addWidget(self.txtUser)
 
-        self.lblProfile = QLabel(_('Profile') + ':', self)
+        self.lblProfile = QLabel(_('Profile:'), self)
         hlayout2.addWidget(self.lblProfile)
         self.txt_profile = QLineEdit(self)
         self.txt_profile.textChanged.connect(self.fullPathChanged)
         hlayout2.addWidget(self.txt_profile)
 
-        self.lblFullPath = QLabel(_('Full snapshot path') + ': ', self)
+        self.lblFullPath = QLabel(_('Full snapshot path:'), self)
         self.lblFullPath.setWordWrap(True)
         vlayout2.addWidget(self.lblFullPath)
 
@@ -449,7 +453,8 @@ class SettingsDialog(QDialog):
                 'Every {n} minute', 'Every {n} minutes', 10).format(n=10),
             config.Config._30_MIN: ngettext(
                 'Every {n} minute', 'Every {n} minutes', 30).format(n=30),
-            config.Config._1_HOUR: _('Every hour'),
+            config.Config._1_HOUR: ngettext(
+                'Every hour', 'Every {n} hours', 1).format(n=1),
             config.Config._2_HOURS: ngettext(
                 'Every {n} hour', 'Every {n} hours', 2).format(n=2),
             config.Config._4_HOURS: ngettext(
@@ -469,7 +474,7 @@ class SettingsDialog(QDialog):
 
         self.fillCombo(self.comboSchedule, schedule_modes_dict)
 
-        self.lblScheduleDay = QLabel(_('Day') + ':', self)
+        self.lblScheduleDay = QLabel(_('Day:'), self)
         self.lblScheduleDay.setContentsMargins(5, 0, 0, 0)
         self.lblScheduleDay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         glayout.addWidget(self.lblScheduleDay, 1, 0)
@@ -480,7 +485,7 @@ class SettingsDialog(QDialog):
         for d in range(1, 29):
             self.comboScheduleDay.addItem(QIcon(), str(d), d)
 
-        self.lblScheduleWeekday = QLabel(_('Weekday') + ':', self)
+        self.lblScheduleWeekday = QLabel(_('Weekday:'), self)
         self.lblScheduleWeekday.setContentsMargins(5, 0, 0, 0)
         self.lblScheduleWeekday.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         glayout.addWidget(self.lblScheduleWeekday, 2, 0)
@@ -488,14 +493,15 @@ class SettingsDialog(QDialog):
         self.comboScheduleWeekday = QComboBox(self)
         glayout.addWidget(self.comboScheduleWeekday, 2, 1)
 
+        sunday = datetime.date(2011, 11, 6)
         for d in range(1, 8):
             self.comboScheduleWeekday.addItem(
                 QIcon(),
-                datetime.date(2011, 11, 6 + d).strftime("%A"),
+                (sunday + datetime.timedelta(days=d)).strftime('%A'),
                 d
             )
 
-        self.lblScheduleTime = QLabel(_('Hour') + ':', self)
+        self.lblScheduleTime = QLabel(_('Hour:'), self)
         self.lblScheduleTime.setContentsMargins(5, 0, 0, 0)
         self.lblScheduleTime.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         glayout.addWidget(self.lblScheduleTime, 3, 0)
@@ -510,7 +516,7 @@ class SettingsDialog(QDialog):
                 t
             )
 
-        self.lblScheduleCronPatern = QLabel(_('Hours') + ':', self)
+        self.lblScheduleCronPatern = QLabel(_('Hours:'), self)
         self.lblScheduleCronPatern.setContentsMargins(5, 0, 0, 0)
         self.lblScheduleCronPatern.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -528,7 +534,7 @@ class SettingsDialog(QDialog):
         self.lblScheduleRepeated.setWordWrap(True)
         glayout.addWidget(self.lblScheduleRepeated, 5, 0, 1, 2)
 
-        self.lblScheduleRepeatedPeriod = QLabel(_('Every') + ':')
+        self.lblScheduleRepeatedPeriod = QLabel(_('Every:'))
         self.lblScheduleRepeatedPeriod.setContentsMargins(5, 0, 0, 0)
         self.lblScheduleRepeatedPeriod.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -624,20 +630,19 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(tabWidget, _('&Exclude'))
         layout = QVBoxLayout(tabWidget)
 
-        self.lblSshEncfsExcludeWarning = QLabel(
-            "<b>{}:</b> {}".format(
-                _('Info'),
-                _(
-                    "In 'SSH encrypted' mode, only single or double asterisks "
-                    "are functional (e.g. {example2}). Other types of "
-                    "wildcards and patterns will be ignored (e.g. {example1})."
-                    "Filenames are unpredictable in this mode due to "
-                    "encryption by EncFS."
-                ).format(example1="<code>'foo*'</code>, "
-                                  "<code>'[fF]oo'</code>, "
-                                  "<code>'fo?'</code>",
-                         example2="<code>'foo/*'</code>, "
-                                  "<code>'foo/**/bar'</code>")
+        self.lblSshEncfsExcludeWarning = QLabel(_(
+            "{BOLD}Info{ENDBOLD}: "
+            "In 'SSH encrypted' mode, only single or double asterisks are "
+            "functional (e.g. {example2}). Other types of wildcards and "
+            "patterns will be ignored (e.g. {example1}). Filenames are "
+            "unpredictable in this mode due to encryption by EncFS.").format(
+                BOLD='<strong>',
+                ENDBOLD='</strong>',
+                example1="<code>'foo*'</code>, "
+                         "<code>'[fF]oo'</code>, "
+                         "<code>'fo?'</code>",
+                example2="<code>'foo/*'</code>, "
+                         "<code>'foo/**/bar'</code>"
             ),
             self
         )
@@ -645,7 +650,8 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.lblSshEncfsExcludeWarning)
 
         self.listExclude = QTreeWidget(self)
-        self.listExclude.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.listExclude.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection)
         self.listExclude.setRootIsDecorated(False)
         self.listExclude.setHeaderLabels(
             [_('Exclude patterns, files or folders'), 'Count'])
@@ -694,7 +700,7 @@ class SettingsDialog(QDialog):
         hlayout = QHBoxLayout()
         layout.addLayout(hlayout)
         self.cbExcludeBySize = QCheckBox(
-            _('Exclude files bigger than: '), self)
+            _('Exclude files bigger than:'), self)
         qttools.set_wrapped_tooltip(
             self.cbExcludeBySize,
             [
@@ -726,7 +732,7 @@ class SettingsDialog(QDialog):
         layout = QGridLayout(layoutWidget)
 
         # remove old snapshots
-        self.cbRemoveOlder = QCheckBox(_('Older than') + ':', self)
+        self.cbRemoveOlder = QCheckBox(_('Older than:'), self)
         layout.addWidget(self.cbRemoveOlder, 0, 0)
         self.cbRemoveOlder.stateChanged.connect(self.updateRemoveOlder)
 
@@ -748,7 +754,7 @@ class SettingsDialog(QDialog):
         enabled, value, unit = self.config.minFreeSpace()
 
         self.cbFreeSpace = QCheckBox(
-            _('If free space is less than') + ':', self)
+            _('If free space is less than:'), self)
         layout.addWidget(self.cbFreeSpace, 1, 0)
         self.cbFreeSpace.stateChanged.connect(self.updateFreeSpace)
 
@@ -768,7 +774,7 @@ class SettingsDialog(QDialog):
 
         # min free inodes
         self.cbFreeInodes = QCheckBox(
-            _('If free inodes is less than') + ':', self)
+            _('If free inodes is less than:'), self)
         layout.addWidget(self.cbFreeInodes, 2, 0)
 
         self.spbFreeInodes = QSpinBox(self)
@@ -782,7 +788,7 @@ class SettingsDialog(QDialog):
         self.cbFreeInodes.stateChanged.connect(enabled)
 
         # smart remove
-        self.cbSmartRemove = QCheckBox(_('Smart remove:'), self)
+        self.cbSmartRemove = QCheckBox(_('Smart removal:'), self)
         layout.addWidget(self.cbSmartRemove, 3, 0)
 
         widget = QWidget(self)
@@ -906,7 +912,7 @@ class SettingsDialog(QDialog):
         hlayout = QHBoxLayout()
         layout.addLayout(hlayout)
 
-        hlayout.addWidget(QLabel(_('Log Level') + ':', self))
+        hlayout.addWidget(QLabel(_('Log Level:'), self))
 
         self.comboLogLevel = QComboBox(self)
         hlayout.addWidget(self.comboLogLevel, 1)
@@ -1024,8 +1030,7 @@ class SettingsDialog(QDialog):
         # bwlimit
         hlayout = QHBoxLayout()
         layout.addLayout(hlayout)
-        self.cbBwlimit = QCheckBox(
-            _('Limit rsync bandwidth usage') + ': ', self)
+        self.cbBwlimit = QCheckBox(_('Limit rsync bandwidth usage:'), self)
         hlayout.addWidget(self.cbBwlimit)
         self.spbBwlimit = QSpinBox(self)
         self.spbBwlimit.setSuffix(' ' + _('KB/sec'))
@@ -1215,14 +1220,14 @@ class SettingsDialog(QDialog):
         self.cbSshCheckPing = QCheckBox(_('Check if remote host is online'))
         qttools.set_wrapped_tooltip(
             self.cbSshCheckPing,
-            _('Warning: if disabled and the remote host is not available, '
+            _('Warning: If disabled and the remote host is not available, '
               'this could lead to some weird errors.')
         )
         self.cbSshCheckCommands = QCheckBox(
-            _('Check if remote host supports all necessary commands'))
+            _('Check if remote host supports all necessary commands.'))
         qttools.set_wrapped_tooltip(
             self.cbSshCheckCommands,
-            _('Warning: if disabled and the remote host does not support all '
+            _('Warning: If disabled and the remote host does not support all '
               'necessary commands, this could lead to some weird errors.')
         )
         layout.addWidget(self.cbSshCheckPing)
@@ -1395,14 +1400,17 @@ class SettingsDialog(QDialog):
         ))
 
         if not recommend:
-            recommend = [_('(All recommendations already included.)')]
+            text = _('{BOLD}Highly recommended{ENDBOLD}: (All recommendations '
+                    'already included.)').format(
+                        BOLD='<strong>', ENDBOLD='</strong>')
 
-        self._label_exclude_recommend.setText(
-            '<strong>{}</strong>: {}'.format(
-                _('Highly recommended'),
-                ', '.join(sorted(recommend))
-            )
-        )
+        else:
+            text = _('{BOLD}Highly recommended{ENDBOLD}: {files}').format(
+                BOLD='<strong>',
+                ENDBOLD='</strong>',
+                files=', '.join(sorted(recommend)))
+
+        self._label_exclude_recommend.setText(text)
 
     def updateProfile(self):
         if self.config.currentProfile() == '1':
@@ -1592,6 +1600,15 @@ class SettingsDialog(QDialog):
 
         if item_data == self.config.CUSTOM_HOUR:
 
+            # TODO
+            # Dev note (buhtz, 2024-05): IMHO checkCronPattern() is not needed
+            # because the "crontab" command itself will validate this. See
+            # schedule.write_crontab().
+            # We just need to take care to catch an the error in the GUI
+            # and report it to the user.
+            # An alternative solution would be a GUI element where the user
+            # is not able to input an invalid value. See #1449 about redesign
+            # the schedule section in the Manage Profiles dialog.
             if not tools.checkCronPattern(self.txtScheduleCronPatern.text()):
 
                 self.errorHandler(
@@ -1641,9 +1658,10 @@ class SettingsDialog(QDialog):
 
             if not self.txtSshPrivateKeyFile.text():
 
-                question = _('You did not choose a private key file for '
-                             'SSH.\nWould you like to generate a new '
-                             'password-less public/private key pair?')
+                question = '{}\n{}'.format(
+                        _('You did not choose a private key file for SSH.'),
+                        _('Would you like to generate a new password-less '
+                          'public/private key pair?'))
                 if self.questionHandler(question):
                     self.btnSshKeyGenClicked()
 
@@ -1803,13 +1821,12 @@ class SettingsDialog(QDialog):
 
             try:
                 mnt.preMountCheck(mode=mode, first_run=True, **mount_kwargs)
+
             except NoPubKeyLogin as ex:
                 logger.error(str(ex), self)
 
-                question = _(
-                    'Would you like to copy your public SSH key to the\n'
-                    'remote host to enable password-less login?'
-                )
+                question = _('Would you like to copy your public SSH key to '
+                             'the remote host to enable password-less login?')
                 rc_copy_id = sshtools.sshCopyId(
                     self.config.sshPrivateKeyFile() + '.pub',
                     self.config.sshUser(),
@@ -1838,17 +1855,19 @@ class SettingsDialog(QDialog):
 
                     return False
 
-                msg = _("The authenticity of host {host} can't be "
-                        "established.\n\n{keytype} key fingerprint is:") \
-                        .format(host='"{}"'.format(self.config.sshHost()),
-                                keytype=keyType)
+                msg = '{}\n\n{}'.format(
+                        _("The authenticity of host {host} can't be "
+                          "established.").format(
+                              host=self.config.sshHost()),
+                        _('{keytype} key fingerprint is:').format(
+                            keytype=keyType))
                 options = []
                 lblFingerprint = QLabel(fingerprint + '\n')
                 lblFingerprint.setWordWrap(False)
                 lblFingerprint.setFont(QFont('Monospace'))
                 options.append({'widget': lblFingerprint, 'retFunc': None})
                 lblQuestion = QLabel(
-                    _("Please verify this fingerprint! Would you like to "
+                    _("Please verify this fingerprint. Would you like to "
                       "add it to your 'known_hosts' file?")
                 )
                 options.append({'widget': lblQuestion, 'retFunc': None})
@@ -2233,7 +2252,7 @@ class SettingsDialog(QDialog):
         else:
             path = self.editSnapshotsPath.text()
         self.lblFullPath.setText(
-            _('Full snapshot path: ') +
+            _('Full snapshot path:') + ' ' +
             os.path.join(
                 path,
                 'backintime',
@@ -2322,13 +2341,8 @@ class SettingsDialog(QDialog):
             self.listExclude.header(), self.listExcludeSortLoop, *args)
 
     def printDefault(self, value):
-        if value:
-            value_ = _('enabled')
-
-        else:
-            value_ = _('disabled')
-
-        return ' (%s: %s)' % (_('default'), value_)
+        return ' ' + _('(default: {})').format(
+            _('enabled') if value else _('disabled'))
 
     def restoreConfig(self, *args):
         RestoreConfigDialog(self).exec()
@@ -2585,9 +2599,9 @@ class RestoreConfigDialog(QDialog):
         for row, profileId in enumerate(cfg.profiles()):
 
             for col, txt in enumerate((
-                    _('Profile') + ': ' + str(profileId),
+                    _('Profile:') + str(profileId),
                     cfg.profileName(profileId),
-                    _('Mode') + ': ' + cfg.SNAPSHOT_MODES[
+                    _('Mode:') + cfg.SNAPSHOT_MODES[
                         cfg.snapshotsMode(profileId)][1]
                     )):
                 self.gridProfiles.addWidget(QLabel(txt, self), row, col)
@@ -2735,14 +2749,14 @@ class EditUserCallback(QDialog):
             logger.error(
                 'user-callback script has no shebang (#!/bin/sh) line.')
             self.config.errorHandler(
-                _('user-callback script has no shebang (#!/bin/sh) line.'))
+                'user-callback script has no shebang (#!/bin/sh) line.')
 
             return False
 
         if not tools.checkCommand(m.group(1)):
             logger.error('Shebang in user-callback script is not executable.')
-            self.config.errorHandler(
-                _('Shebang in user-callback script is not executable.'))
+            self.config.errorHandle(
+                'Shebang in user-callback script is not executable.')
 
             return False
 

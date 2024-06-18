@@ -55,11 +55,11 @@ class DiffOptionsDialog(QDialog):
         cmd = self.config.strValue('qt.diff.cmd', DIFF_CMD)
         params = self.config.strValue('qt.diff.params', DIFF_PARAMS)
 
-        self.mainLayout.addWidget(QLabel(_('Command') + ':'), 0, 0)
+        self.mainLayout.addWidget(QLabel(_('Command:')), 0, 0)
         self.editCmd = QLineEdit(cmd, self)
         self.mainLayout.addWidget(self.editCmd, 0, 1)
 
-        self.mainLayout.addWidget(QLabel(_('Parameters') + ':'), 1, 0)
+        self.mainLayout.addWidget(QLabel(_('Parameters:')), 1, 0)
         self.editParams = QLineEdit(params, self)
         self.mainLayout.addWidget(self.editParams, 1, 1)
 
@@ -87,7 +87,7 @@ class DiffOptionsDialog(QDialog):
         # Command exists?
         if tools.checkCommand(cmd) == False:
             messagebox.info(_(
-                'The command "{cmd}" can not be found on this system. Please '
+                'The command "{cmd}" cannot be found on this system. Please '
                 'try something else or press Cancel.').format(cmd=cmd))
             return
 
@@ -405,8 +405,7 @@ class SnapshotsDialog(QDialog):
                     'snapshots?').format(
                         file=f'"{self.path}"', count=len(items))
 
-        msg = '{}\n{}: {}'.format(
-            msg, _('WARNING'), _('This cannot be revoked!'))
+        msg = _('WARNING: This cannot be revoked.')
 
         answer = messagebox.warningYesNo(self, msg)
         if answer == QMessageBox.StandardButton.Yes:
