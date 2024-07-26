@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-import json
 import os
 from pathlib import Path
 import stat
@@ -698,12 +697,20 @@ class Snapshots:
 
             return True
 
-    def _warning_on_take_snapshot(self, config):
-        missing = has_missing(config.include())
+    def _check_included_sources_exist_on_take_snapshot(self, config):
+        """
+        Check if files and/or folders in the include list exist on the source.
+
+        If a file or folder does not exist, a warning message is logged.
+
+        Args:
+            cfg (config.Config): config that should be used
+        """
+        missing = has_missing_includes(config.include())
 
         if missing:
             msg = ', '.join(missing)
-            msg = f'The following folders are missing: {msg}'
+            msg = f'The following **files/**folders are missing: {msg}'
             logger.warning(msg)
             self.setTakeSnapshotMessage(1, msg)
 
@@ -815,7 +822,7 @@ class Snapshots:
                     else:
                         self.config.setCurrentHashId(hash_id)
 
-                    self._warning_on_take_snapshot(self.config)
+                    self._check_included_sources_exist_on_take_snapshot(self.config)
                     include_folders = self.config.include()
 
                     if not include_folders:
@@ -3097,7 +3104,7 @@ def lastSnapshot(cfg):
         return sids[0]
 
 
-def has_missing(included):
+def has_missing_includes(included):
     """
     Check if there are missing files or folders in a snapshot.
 

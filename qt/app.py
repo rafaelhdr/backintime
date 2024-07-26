@@ -1212,7 +1212,7 @@ class MainWindow(QMainWindow):
             self.timeLine.checkSelection()
 
     def validate_on_take_snapshot(self):
-        missing = snapshots.has_missing(self.config.include())
+        missing = snapshots.has_missing_includes(self.config.include())
         if missing:
             msg_missing = '\n'.join(missing)
             msg = _('The following folders are missing: {folders} Do you want to proceed?'.format(
