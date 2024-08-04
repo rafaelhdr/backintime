@@ -16,6 +16,7 @@
    * [How to use checksum to find corrupt files periodically?](#how-to-use-checksum-to-find-corrupt-files-periodically)
    * [What is the meaning of the leading 11 characters (e.g. "cf...p.....") in my snapshot logs?](#what-is-the-meaning-of-the-leading-11-characters-eg-cfp-in-my-snapshot-logs)
    * [Snapshot "WITH ERRORS": [E] 'rsync' ended with exit code 23: See 'man rsync' for more details](#snapshot-with-errors-e-rsync-ended-with-exit-code-23-see-man-rsync-for-more-details)
+   * [What happens when I remove a snapshot?](#what-happens-when-i-remove-a-snapshot)
 - [Restore](#restore)
    * [After Restore I have duplicates with extension ".backup.20131121"](#after-restore-i-have-duplicates-with-extension-backup20131121)
    * [Back In Time doesn't find my old Snapshots on my new Computer](#back-in-time-doesnt-find-my-old-snapshots-on-my-new-computer)
@@ -386,6 +387,16 @@ which error is hidden behind "exit code 23" (and possibly fix it - eg. delete or
 We plan to implement an improved handling of exit code 23 in the future
 (presumably by introducing warnings into the snapshot log).
 
+## What happens when I remove a snapshot?
+
+Each snapshot is stored in a dated subdirectory of the "full snapshot path"
+shown in Settings.  It contains a ``backup`` directory of all the files as well
+as a log of the snapshot's creation and some other details.  Removing the
+snapshot removes this whole directory.  Each snapshot is independent of the
+others, so other snapshots are not affected. However, the data of identical files is
+not stored redundantly by multiple snapshots, so removing a snapshot will only
+recover the space used by files that are unique to that snapshot.
+
 
 # Restore
 
@@ -534,16 +545,14 @@ https://itsfoss.com/apt-key-deprecated/).
 A solution is described in
 [#1338](https://github.com/bit-team/backintime/issues/1338#issuecomment-1454740118)
 ## Segmentation fault on Exit
-To our understanding, the root cause is attributed to the Qt GUI library or one
-of its components. No known solution exists. The issue has persisted for some
-time, including in the latest version of _Back In Time_ utilizing Qt
-version 6. It does not impact the functionality of _Back In Time_ or jeopardize
-backup integrity. Simply ignore it.
+This problem existed at least since version 1.2.1, and will hopefully be fixed
+with version 1.5.0. For all affected versions, it does not impact the
+functionality of _Back In Time_ or jeopardize backup integrity. It can be
+safely ignored.
 
 See also:
+- [#1768](https://github.com/bit-team/backintime/pull/1768)
 - [#1095](https://github.com/bit-team/backintime/issues/1095)
-- [RedHead#1844781](https://bugzilla.redhat.com/show_bug.cgi?id=1844781)
-- [Python crash when exiting Back In Time (Manjaro Forum)](https://forum.manjaro.org/t/python-crash-when-exiting-back-in-time/102856/11)
 
 ## Version >= 1.2.0 works very slow / Unchanged files are backed up
 

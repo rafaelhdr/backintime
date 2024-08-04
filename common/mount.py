@@ -604,11 +604,11 @@ class MountControl(object):
         try:
             subprocess.check_call(['fusermount', '-u', self.currentMountpoint])
 
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
             raise MountException(
                 _("Can't unmount {mountprocess} from {mountpoint}.")
                 .format(mountprocess=self.mountproc,
-                        mountpoint=self.currentMountpoint))
+                        mountpoint=self.currentMountpoint)) from exc
 
     def preMountCheck(self, first_run=False):
         """
@@ -694,7 +694,7 @@ class MountControl(object):
 
             raise MountException(
                 _('{command} not found. Please install it '
-                  '(e.g. via "{installcommand}"').format(
+                  '(e.g. via "{installcommand}")').format(
                       command=self.mountproc,
                       installcommand=f"'apt-get install {self.mountproc}'")
             )

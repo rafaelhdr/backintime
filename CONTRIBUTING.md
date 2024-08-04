@@ -65,10 +65,13 @@ request is accepted.
 
 - Follow [PEP 8](https://peps.python.org/pep-0008/) as a minimal Style Guide
   for Python Code.
+- Prefer _single quotes_ (e.g. `'Hello World'`) over _double qutoes_
+  (e.g. `"Hello World"`). Exceptions are when single quotes contained in the
+  string (e.g. `"Can't unmount"`).
 - For docstrings follow [Google Style Guide](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_google.html) 
   (see our own [HOWTO about doc generation](common/doc-dev/1_doc_maintenance_howto.md)).
-- Be careful when using automatic formatters like `black` and please mention
-  the use of it when opening a pull request.
+- Avoid the use of automatic formatters like `black` but mention the use of
+  them when opening a pull request.
 - Run unit tests before you open a Pull Request. You can run them via
   `make`-system with `cd common && ./configure && make && make test` or using a
   regular unittest runner of your choice (e.g. `pytest`). See section
@@ -308,7 +311,7 @@ potential candidate. However, lack of resources hinders this effort. If no
 volunteers step forward, the encryption feature will be removed, prioritizing
 user security and team maintenance efforts.
 See [Issue #1734](https://github.com/bit-team/backintime/issues/1734) about the
-transation process and the discussion about alternatives to EncFS.
+transition process and the discussion about alternatives to EncFS.
 
 Besides replacing EncFS there is also a
 [discussion](https://mail.python.org/archives/list/bit-dev@python.org/thread/D2GXCCVUAVZ2E5ELBHUZGT7ITUN4ADEP)
