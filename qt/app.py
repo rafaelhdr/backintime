@@ -98,6 +98,7 @@ from restoredialog import RestoreDialog
 import languagedialog
 import messagebox
 from aboutdlg import AboutDlg
+import qttools
 
 
 class MainWindow(QMainWindow):
@@ -823,8 +824,6 @@ class MainWindow(QMainWindow):
             if answer != QMessageBox.StandardButton.Yes:
                 return event.ignore()
 
-        self.qapp.removeEventFilter(self.mouseButtonEventFilter)
-
         self.config.setStrValue('qt.last_path', self.path)
         self.config.setProfileStrValue('qt.last_path', self.path)
 
@@ -880,12 +879,8 @@ class MainWindow(QMainWindow):
 
         self.comboProfiles.clear()
 
+        qttools.update_combo_profiles(self.config, self.comboProfiles, self.config.currentProfile())
         profiles = self.config.profilesSortedByName()
-
-        for profile_id in profiles:
-            self.comboProfiles.addProfileID(profile_id)
-            if profile_id == self.config.currentProfile():
-                self.comboProfiles.setCurrentProfileID(profile_id)
 
         self.comboProfilesAction.setVisible(len(profiles) > 1)
 
@@ -2097,6 +2092,8 @@ if __name__ == '__main__':
         cfg.xWindowId = mainWindow.winId()
         mainWindow.show()
         qapp.exec()
+
+    mainWindow.qapp.removeEventFilter(mainWindow.mouseButtonEventFilter)
 
     cfg.PLUGIN_MANAGER.appExit()
     appInstance.exitApplication()

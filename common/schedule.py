@@ -1,16 +1,15 @@
-# SPDX-FileCopyrightText: © 2024 Christian BUHTZ <c.buhtz@posteo.jp>
 # SPDX-FileCopyrightText: © 2008-2022 Oprea Dan
 # SPDX-FileCopyrightText: © 2008-2022 Bart de Koning
 # SPDX-FileCopyrightText: © 2008-2022 Richard Bailey
 # SPDX-FileCopyrightText: © 2008-2022 Germar Reitze
+# SPDX-FileCopyrightText: © 2024 Christian BUHTZ <c.buhtz@posteo.jp>
 #
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
 # This file is part of the program "Back In time" which is released under GNU
-# General Public License v2 (GPLv2).
-# See file LICENSE or go to <https://www.gnu.org/licenses/#GPL>.
-"""Basic or low-level routines regarding scheduling.
-
+# General Public License v2 (GPLv2). See file/folder LICENSE or go to
+# <https://spdx.org/licenses/GPL-2.0-or-later.html>.
+"""
 Basic functions for handling Cron, Crontab, and other scheduling-related
 features.
 """
@@ -25,6 +24,36 @@ as match target while parsing the crontab file. See
 """
 
 
+def _determine_crontab_command() -> str:
+    """Return the name of one of the supported crontab commands if available.
+
+    Returns:
+        (str): The command name. Usually "crontab" or "fcrontab".
+
+    Raises:
+        RuntimeError: If none of the supported commands available.
+    """
+    to_check_commands = ['crontab', 'fcrontab']
+    for cmd in to_check_commands:
+        proc = subprocess.run(
+            ['which', cmd],
+            stdout=subprocess.PIPE,
+            check=False
+        )
+        if proc.returncode == 0:
+            return cmd
+
+    # syslog is not yet initialized
+    logger.openlog()
+    msg = 'Command ' + ' and '.join(to_check_commands) + ' not found.'
+    logger.critical(msg)
+
+    raise RuntimeError(msg)
+
+
+CRONTAB_COMMAND = _determine_crontab_command()
+
+
 def read_crontab():
     """Read current users crontab.
 
@@ -35,24 +64,26 @@ def read_crontab():
 
     Dev notes (buhtz, 2024-05): Might should raise exception on errors.
     """
-
     try:
         proc = subprocess.run(
-            ['crontab', '-l'],
+            [CRONTAB_COMMAND, '-l'],
             check=True,
             capture_output=True,
             text=True)
 
-    except FileNotFoundError:
-        logger.error('Command "crontab" not found.')
-        return []
-
     except subprocess.CalledProcessError as err:
-        logger.error('Failed to get crontab lines. Return code '
-                     f'of {err.cmd} was {err.returncode}.')
+        logger.error(f'Failed to get content via "{CRONTAB_COMMAND}". '
+                     f'Return code of {err.cmd} was {err.returncode}.')
         return []
 
     content = proc.stdout.split('\n')
+
+    # Remove empty lines from the end
+    try:
+        while content[-1] == '':
+            content = content[:-1]
+    except IndexError:
+        pass
 
     # Fixes issue #1181 (line count of empty crontab was 1 instead of 0)
     if content == ['']:
@@ -78,25 +109,27 @@ def write_crontab(lines):
     """
     content = '\n'.join(lines)
 
+    # Crontab needs to end with a newline
+    if not content.endswith('\n'):
+        content += '\n'
+
     # Pipe the content (via echo over stdout) to crontab's stdin
     with subprocess.Popen(['echo', content], stdout=subprocess.PIPE) as echo:
 
         try:
             subprocess.run(
-                ['crontab', '-'],
+                [CRONTAB_COMMAND, '-'],
                 stdin=echo.stdout,
                 check=True,
                 capture_output=True,
                 text=True
             )
 
-        except FileNotFoundError as err:
-            logger.error(f'Command "crontab" not found. Error was: {err}')
-            return False
-
         except subprocess.CalledProcessError as err:
-            logger.error('Failed to write crontab lines. Return code '
-                         f'was {err.returncode}. Error was:\n{err.stderr}')
+            logger.error(
+                f'Failed to write crontab lines with "{CRONTAB_COMMAND}". '
+                f'Return code was {err.returncode}. '
+                f'Error was:\n{err.stderr}')
             return False
 
     return True
@@ -164,7 +197,7 @@ def is_cron_running():
 
     with subprocess.Popen(['ps', '-eo', 'comm'], stdout=subprocess.PIPE) as ps:
         try:
-            grep = subprocess.run(
+            subprocess.run(
                 ['grep', '--ignore-case', 'cron'],
                 stdin=ps.stdout,
                 stdout=subprocess.PIPE,

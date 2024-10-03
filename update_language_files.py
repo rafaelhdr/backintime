@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: © 2023 Christian BUHTZ <c.buhtz@posteo.jp>
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This file is part of the program "Back In time" which is released under GNU
+# General Public License v2 (GPLv2). See file/folder LICENSE or go to
+# <https://spdx.org/licenses/GPL-2.0-or-later.html>.
 """This helper script does manage transferring translations to and from the
 translation platform (currently Weblate).
 """
 import sys
-import io
 import datetime
-import json
 import re
 import tempfile
+import string
 import shutil
-import pprint
 from pathlib import Path
 from subprocess import run, check_output
 from common import languages
@@ -32,6 +37,30 @@ PACKAGE_VERSION = Path('VERSION').read_text('utf-8').strip()
 BUG_ADDRESS = 'https://github.com/bit-team/backintime'
 # RegEx pattern: Character & followed by a word character (extract as group)
 REX_SHORTCUT_LETTER = re.compile(r'&(\w)')
+
+
+def dict_as_code(a_dict: dict, indent_level: int) -> list[str]:
+    """Convert a (nested) Python dict into its PEP8 conform as-in-code
+    representation.
+    """
+    tab = ' ' * 4 * indent_level
+    result = []
+    for key in a_dict:
+
+        # A nested dict
+        if isinstance(a_dict[key], dict):
+            result.append(f"{tab}'{key}': {{")
+
+            result.extend(
+                dict_as_code(a_dict[key], indent_level+1))
+
+            result.append(f"{tab}}},")
+            continue
+
+        # Regular key: value pair
+        result.append(f"{tab}'{key}': '{a_dict[key]}',")
+
+    return result
 
 
 def update_po_template():
@@ -188,6 +217,123 @@ def update_from_weblate():
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+def check_syntax_of_po_files():
+    """Check all po files of known syntax violations.
+    """
+
+    # Match every character except open/closing curly brackets
+    rex_reduce = re.compile(r'[^\{\}]')
+    # Match every pair of curly brackets
+    rex_curly_pair = re.compile(r'\{\}')
+    # Extract placeholder/variable names
+    rex_names = re.compile(r'\{(.*?)\}')
+
+    def _curly_brackets_balanced(to_check):
+        """Check if curly brackes for variable placeholders are balanced."""
+        # Remove all characters that are not curly brackets
+        reduced = rex_reduce.sub('', to_check)
+
+        # Remove valid pairs of curly brackets
+        invalid = rex_curly_pair.sub('', reduced)
+
+        # Catch nested curly brackest like this
+        # "{{{}}}", "{{}}"
+        # This is valid Python code and won't cause Exceptions. So errors here
+        # might be false negative. But despite rare cases where this might be
+        # used it is a high possibility that there is a typo in the translated
+        # string. BIT won't use constructs like this in strings, so it is
+        # handled as an error.
+        if rex_curly_pair.findall(invalid):
+            print(f'\nERROR: Curly brackets nested: {to_check}')
+            return False
+
+        if invalid:
+            print(f'\nERROR: Curly brackets not balanced : {to_check}')
+            return False
+
+        return True
+
+    def _other_errors(to_check):
+        """Check if there are any other errors that could be thrown via
+        printing this string."""
+        try:
+            # That is how print() internally parse placeholders and other
+            # things.
+            list(string.Formatter().parse(format_string=to_check))
+
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f'\nERROR: {exc} in translation: {to_check}')
+            return False
+
+        return True
+
+    def _place_holders(trans_string, src_string, flags):
+        """Check if the placeholders between original source string
+        and the translated string are identical. Order is ignored.
+
+        To disable this check for a specific string add the translation
+        flag "ignore-placeholder-compare" to the entry in the po-file.
+        """
+
+        if 'ignore-placeholder-compare' in flags:
+            return True
+
+        flagmsg = 'Disable this check with flagging it with ' \
+                  '"ignore-placeholder-compare" in its po-file.'
+
+        # Compare number of curly brackets.
+        for bracket in tuple('{}'):
+            if src_string.count(bracket) != trans_string.count(bracket):
+                print(f'\nERROR: Number of "{bracket}" between original '
+                      'source and translated string is different.\n'
+                      f'Translation: {trans_string}\n{flagmsg}')
+                return False
+
+        # Compare variable names
+        org_names = rex_names.findall(src_string)
+        trans_names = rex_names.findall(trans_string)
+        if sorted(org_names) != sorted(trans_names):
+            print('\nERROR: Names of placeholders between original source '
+                  'and translated string are different.\n'
+                  f'Names in original    : {org_names}\n'
+                  f'Names in translation : {trans_names}\n'
+                  f'Full translation: {trans_string}\n{flagmsg}')
+            return False
+
+        return True
+
+    print('Checking syntax of po files...')
+
+    # Each po file
+    for po_path in all_po_files_in_local_dir():
+        # Language code determined by po-filename
+        print(f'{po_path.with_suffix("").name}', end=' ')
+
+        pof = polib.pofile(po_path)
+
+        # Each translated entry
+        for entry in pof.translated_entries():
+            # Plural form?
+            if entry.msgstr_plural or entry.msgid_plural:
+                # Ignoring plural form because this is to complex, not logical
+                # in all cases and also not worth the effort.
+                continue
+
+            if (not _curly_brackets_balanced(entry.msgstr)
+                    or not _other_errors(entry.msgstr)
+                    or not _place_holders(entry.msgstr,
+                                          entry.msgid,
+                                          entry.flags)):
+                print(f'Source string: {entry.msgid}\n')
+
+    print('')
+
+
+def all_po_files_in_local_dir():
+    """All po files (recursive)."""
+    return LOCAL_DIR.rglob('**/*.po')
+
+
 def create_completeness_dict():
     """Create a simple dictionary indexed by language code and value that
     indicate the completeness of the translation in percent.
@@ -198,7 +344,7 @@ def create_completeness_dict():
     result = {}
 
     # each po file in the repository
-    for po_path in LOCAL_DIR.rglob('**/*.po'):
+    for po_path in all_po_files_in_local_dir():
         pof = polib.pofile(po_path)
 
         result[po_path.stem] = pof.percent_translated()
@@ -209,7 +355,7 @@ def create_completeness_dict():
     result['en'] = 100
 
     # info
-    print(json.dumps(result, indent=4))
+    # print(json.dumps(result, indent=4))
 
     return result
 
@@ -224,35 +370,32 @@ def create_languages_file():
     """
 
     # Convert language names dict to python code as a string
-    names = update_language_names()
-    stream = io.StringIO()
-    pprint.pprint(names, indent=2, stream=stream, sort_dicts=True)
-    stream.seek(0)
-    names = stream.read()
+    names_dict = update_language_names()
+    content = ['names = {']
+    content.extend(dict_as_code(names_dict, 1))
+    content.append('}')
 
     # the same with completeness dict
     compl_dict = create_completeness_dict()
-    stream = io.StringIO()
-    pprint.pprint(compl_dict, indent=2, stream=stream, sort_dicts=True)
-    stream.seek(0)
-    completeness = stream.read()
+    content.append('')
+    content.append('')
+    content.append('completeness = {')
+    content.extend(dict_as_code(compl_dict, 1))
+    content.append('}')
 
     with LANGUAGE_NAMES_PY.open('w', encoding='utf8') as handle:
 
         date_now = datetime.datetime.now().strftime('%c')
         handle.write(
-            f'# Generated at {date_now} with help of package "babel" '
+            f'# Generated at {date_now} with help\n# of package "babel" '
             'and "polib".\n')
         handle.write('# https://babel.pocoo.org\n')
         handle.write('# https://github.com/python-babel/babel\n')
+        handle.write(
+            '# pylint: disable=too-many-lines,missing-module-docstring\n')
 
-        handle.write('\nnames = {\n')
-        handle.write(names[1:])
-
+        handle.write('\n'.join(content))
         handle.write('\n')
-
-        handle.write('\ncompleteness = {\n')
-        handle.write(completeness[1:])
 
     print(f'Result written to {LANGUAGE_NAMES_PY}.')
 
@@ -293,6 +436,13 @@ def create_language_names_dict(language_codes: list) -> dict:
         raise ImportError(
             'Can not import package "babel". Please install it.') from exc
 
+    # Babel minimum version (because language code "ie")
+    from packaging.version import Version
+    if Version(babel.__version__) < Version('2.15'):
+        raise ImportError(
+            f'Babel version 2.15 required. But {babel.__version__} '
+            'is installed.')
+
     # Source language (English) should be included
     if 'en' not in language_codes:
         language_codes.append('en')
@@ -300,7 +450,7 @@ def create_language_names_dict(language_codes: list) -> dict:
     # Don't use defaultdict because pprint can't handle it
     result = {}
 
-    for code in language_codes:
+    for code in sorted(language_codes):
         print(f'Processing language code "{code}"...')
 
         lang = babel.Locale.parse(code)
@@ -477,6 +627,14 @@ def check_shortcuts():
 
 if __name__ == '__main__':
 
+    # names = update_language_names()
+
+    # tab = {n: '    ' * n for n in range(1, 11)}
+    # result = ['names = {']
+    # result.extend(dict_as_code(names, 1))
+
+    # print('\n'.join(result))
+    # sys.exit(0)
     check_existence()
 
     FIN_MSG = 'Please check the result via "git diff" before committing.'
@@ -493,6 +651,7 @@ if __name__ == '__main__':
     # into the repository.
     if 'weblate' in sys.argv:
         update_from_weblate()
+        check_syntax_of_po_files()
         create_languages_file()
         print(FIN_MSG)
         sys.exit()
@@ -502,6 +661,11 @@ if __name__ == '__main__':
         check_shortcuts()
         sys.exit()
 
+    # Check for syntax problems (also implicit called via "weblate")
+    if 'syntax' in sys.argv:
+        check_syntax_of_po_files()
+        sys.exit()
+
     print('Use one of the following argument keywords:\n'
           '  source  - Update the pot and po files with translatable '
           'strings extracted from py files. (Prepare upload to Weblate). '
@@ -509,6 +673,8 @@ if __name__ == '__main__':
           '  weblate - Update the po files with translations from '
           'external translation service Weblate. (Download from Weblate)\n'
           '  shortcut - Check po files for redundant keyboard shortcuts '
-          'using "&"')
+          'using "&"\n'
+          '  syntax - Check syntax of po files. (Also done via "weblate" '
+          'command)')
 
     sys.exit(1)

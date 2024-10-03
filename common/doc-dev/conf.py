@@ -10,9 +10,6 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.pardir)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.pardir, "plugins")))
 
-# Import to solve race conditions between config an mount.
-import config
-
 # -- General configuration ------------------------------------------------
 
 extensions = [
@@ -38,8 +35,8 @@ copyright = '2016, Germar Reitze'
 author = 'Germar Reitze'
 
 # Don't edit this variable. It is updated automatically by "updateversion.sh".
-import backintime
-version = backintime.__version__
+import version as version_module
+version = version_module.__version__
 # The full version, including alpha/beta/rc tags.
 release = version  # '1.3.3-dev'
 

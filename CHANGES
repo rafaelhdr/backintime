@@ -1,6 +1,29 @@
 Back In Time
-Version 1.5.2-dev (development of upcoming release)
-* ..
+
+Version 1.5.3-dev (development of upcoming release)
+* Doc: User manual (build with MkDocs) (#1838)
+* Feature: Support language Interlingua (Occidental)
+* Feature: Warn if destination directory is formatted as NTFS (#1854) (David Gibbs @fallingrock)
+* Breaking Change: Minimal Python version 3.9 required (#1731)
+* Breaking Change: Auto migration of config version 4 or lower not longer supported
+* Fix: Prevent duplicates in Exclude/Include list of Manage Profiles dialog
+* Fix: Fix Qt segmentation fault when canceling out of unconfigured BiT (#1095) (Derek Veit @DerekVeit)
+* Fix: Correct global flock fallbacks (#1834) (Timothy Southwick @NickNackGus)
+* Fix: Use SSH key password only if it is valid, otherwise request it from user (#1852) (David Wales @daviewales)
+* Feature: Support fcron (#610)
+* Refactor: General tab and its Schedule section
+* Refactor: Remove class OrderedSet
+* Refactor: Remove os.system() from class Execute
+* Refactor: Systray notifications send utilize DBUS instead of notify-send (#1156) (Felix Stupp @Zocker1999NET)
+* Refactor!: Remove unused config field "user_callback.no_logging" (#1887)
+* Refactor!: Remove eCryptFS check for home folder (#1855)
+* Dependency: Remove libnotify-bin (notify-send) (#1156)
+* Build: Replace "pycodestyle" linter with "flake8" (#1839)
+
+Version 1.5.2 (2024-08-06)
+* Fix: Ensure crontab with ending newline (#781)
+* Fix(translation): Correct corrupt translated strings in Basque, Islandic and Spanish causing application crashes (#1828)
+* Build(translation): Language helper script processing syntax checks on po-files
 
 Version 1.5.1 (2024-07-27)
 * Fix bug: Check if Include folders/files do exists (in case they are removed) (#1586) (@rafaelhdr)
@@ -102,6 +125,7 @@ Version 1.4.0 (2023-09-14)
 * Feature: Rearranged menu bar and its entries in the main window (#1487, #1478).
 * Feature: Configure user interface language via config file and GUI.
 * Documentation: Removed outdated docbook (#1345).
+* Testing: TravisCI now can use dbus
 * Build: Introduced .readthedocs.yaml as asked by ReadTheDocs.org (#1443).
 * Dependency: The oxygen icons should be installed with the BiT Qt GUI since they are used as fallback in case of missing icons
 * Fix bug: Add support for ChainerBackend class as keyring which iterates over all supported keyring backends (#1410)

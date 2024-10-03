@@ -14,13 +14,11 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation,Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
 import os
 import sys
 import pathlib
 import shutil
 import stat
-import pwd
 import grp
 import re
 import random
@@ -28,9 +26,9 @@ import string
 import unittest
 from unittest.mock import patch
 from datetime import date, datetime
-from threading import Thread
 from tempfile import TemporaryDirectory
 from test import generic
+from test.constants import CURRENTUSER, CURRENTGROUP, CURRENTGID, CURRENTUID
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import logger
@@ -39,17 +37,9 @@ import snapshots
 import tools
 import mount
 
-CURRENTUID = os.geteuid()
-CURRENTUSER = pwd.getpwuid(CURRENTUID).pw_name
-
-CURRENTGID = os.getegid()
-CURRENTGROUP = grp.getgrgid(CURRENTGID).gr_name
 
 # all groups the current user is member in
 GROUPS = [i.gr_name for i in grp.getgrall() if CURRENTUSER in i.gr_mem]
-NO_GROUPS = not GROUPS
-
-IS_ROOT = os.geteuid() == 0
 
 
 class TestSnapshots(generic.SnapshotsTestCase):
@@ -204,34 +194,6 @@ class TestSnapshots(generic.SnapshotsTestCase):
         self.assertIsLink(symlink)
         self.assertEqual(os.path.realpath(symlink), sid2.path())
 
-    # def flockSecondInstance(self):
-    #     cfgFile = os.path.abspath(os.path.join(__file__, os.pardir, 'config'))
-    #     cfg = config.Config(cfgFile)
-    #     sn = snapshots.Snapshots(cfg)
-    #     sn.GLOBAL_FLOCK = self.sn.GLOBAL_FLOCK
-
-    #     cfg.setGlobalFlock(True)
-    #     sn.flockExclusive()
-    #     sn.flockRelease()
-
-    # def test_flockExclusive(self):
-    #     RWUGO = 33206 #-rw-rw-rw
-    #     self.cfg.setGlobalFlock(True)
-    #     thread = Thread(target = self.flockSecondInstance, args = ())
-    #     self.sn.flockExclusive()
-
-    #     self.assertExists(self.sn.GLOBAL_FLOCK)
-    #     mode = os.stat(self.sn.GLOBAL_FLOCK).st_mode
-    #     self.assertEqual(mode, RWUGO)
-
-    #     thread.start()
-    #     thread.join(0.01)
-    #     self.assertTrue(thread.is_alive())
-
-    #     self.sn.flockRelease()
-    #     thread.join()
-    #     self.assertFalse(thread.is_alive())
-
     def test_statFreeSpaceLocal(self):
         self.assertIsInstance(self.sn.statFreeSpaceLocal('/'), int)
 
@@ -252,28 +214,9 @@ class TestSnapshots(generic.SnapshotsTestCase):
                                              '--exclude=*bar',
                                              '--exclude=/baz/1'])
 
-    def test_rsyncExclude_duplicate_items(self):
-        exclude = self.sn.rsyncExclude(['/foo', '*bar', '/baz/1', '/foo', '/baz/1'])
-        self.assertListEqual(list(exclude), ['--exclude=/foo',
-                                             '--exclude=*bar',
-                                             '--exclude=/baz/1'])
-
     def test_rsyncInclude_unique_items(self):
         i1, i2 = self.sn.rsyncInclude([('/foo', 0),
                                        ('/bar', 1),
-                                       ('/baz/1/2', 1)])
-        self.assertListEqual(list(i1), ['--include=/foo/',
-                                        '--include=/baz/1/',
-                                        '--include=/baz/'])
-        self.assertListEqual(list(i2), ['--include=/foo/**',
-                                        '--include=/bar',
-                                        '--include=/baz/1/2'])
-
-    def test_rsyncInclude_duplicate_items(self):
-        i1, i2 = self.sn.rsyncInclude([('/foo', 0),
-                                       ('/bar', 1),
-                                       ('/foo', 0),
-                                       ('/baz/1/2', 1),
                                        ('/baz/1/2', 1)])
         self.assertListEqual(list(i1), ['--include=/foo/',
                                         '--include=/baz/1/',
@@ -635,8 +578,6 @@ class TestRestorePathInfo(generic.SnapshotsTestCase):
         self.assertEqual(s.st_uid, CURRENTUID)
         self.assertEqual(s.st_gid, CURRENTGID)
 
-    #TODO: add fakeroot tests with https://github.com/yaybu/fakechroot
-    @unittest.skipIf(IS_ROOT, "We're running as root. So this test won't work.")
     def test_change_owner_without_root(self):
         d = snapshots.FileInfoDict()
         d[b'foo'] = (self.modeFolder, 'root'.encode('utf-8','replace'), CURRENTGROUP.encode('utf-8','replace'))
@@ -663,7 +604,6 @@ class TestRestorePathInfo(generic.SnapshotsTestCase):
         self.assertEqual(s.st_uid, CURRENTUID)
         self.assertEqual(s.st_gid, CURRENTGID)
 
-    @unittest.skipIf(NO_GROUPS, "Current user is in no other group. So this test won't work.")
     def test_change_group(self):
         newGroup = [x for x in GROUPS if x != CURRENTGROUP][0]
         newGID = grp.getgrnam(newGroup).gr_gid
@@ -770,9 +710,9 @@ class TestRemoveSnapshot(generic.SnapshotsWithSidTestCase):
 
 
 @unittest.skipIf(not generic.LOCAL_SSH, generic.SKIP_SSH_TEST_MESSAGE)
-class TestSshSnapshots(generic.SSHTestCase):
+class SshSnapshots(generic.SSHTestCase):
     def setUp(self):
-        super(TestSshSnapshots, self).setUp()
+        super().setUp()
         self.sn = snapshots.Snapshots(self.cfg)
         os.makedirs(self.remoteFullPath)
 
@@ -1040,7 +980,7 @@ def _init_mounting(cfg):
 
 
 @unittest.skipIf(not generic.LOCAL_SSH, generic.SKIP_SSH_TEST_MESSAGE)
-class TestSshPermissions(unittest.TestCase):
+class SshPermissions(unittest.TestCase):
     """Testing to backup the file permissions in a "SSH local"
     snapshot profile.
     """
@@ -1107,7 +1047,7 @@ class TestSshPermissions(unittest.TestCase):
 
 
 @unittest.skipIf(not generic.LOCAL_SSH, generic.SKIP_SSH_TEST_MESSAGE)
-class TestSshRemoveSnapshots(unittest.TestCase):
+class SshRemoveSnapshots(unittest.TestCase):
     """Testing to remove snapshots(SID) in a "SSH local" snapshot profile.
     """
 

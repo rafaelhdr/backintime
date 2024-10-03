@@ -1,20 +1,14 @@
-# Back In Time
-# Copyright (C) 2008-2022 Oprea Dan, Bart de Koning, Richard Bailey,
-# Germar Reitze, Taylor Raack
+# SPDX-FileCopyrightText: © 2008-2022 Oprea Dan
+# SPDX-FileCopyrightText: © 2008-2022 Bart de Koning
+# SPDX-FileCopyrightText: © 2008-2022 Richard Bailey
+# SPDX-FileCopyrightText: © 2008-2022 Germar Reitze
+# SPDX-FileCopyrightText: © 2008-2022 Taylor Raack
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# This file is part of the program "Back In time" which is released under GNU
+# General Public License v2 (GPLv2). See file/folder LICENSE or go to
+# <https://spdx.org/licenses/GPL-2.0-or-later.html>.
 import os
 from pathlib import Path
 import stat
@@ -40,6 +34,7 @@ import snapshotlog
 import flock
 from applicationinstance import ApplicationInstance
 from exceptions import MountException, LastSnapshotSymlink
+from uniquenessset import UniquenessSet
 
 
 class Snapshots:
@@ -863,25 +858,23 @@ class Snapshots:
                                     message=message,
                                     timeout=30)
 
+                            logger.warning(
+                                'Cannot start snapshot yet: target directory '
+                                'not accessible. Will retry each second in '
+                                'the next 30 seconds. Please wait.')
+
                             counter = 0
                             for counter in range(0, 30):
-                                logger.debug(
-                                    'Cannot start snapshot yet: target '
-                                    'directory not accessible. Waiting 1s.')
 
                                 time.sleep(1)
 
                                 if self.config.canBackup():
                                     break
 
-                            if counter != 0:
-                                logger.info(
-                                    f'Waited {counter} seconds for target '
-                                    'directory to be available', self)
-
                         if not self.config.canBackup(profile_id):
-                            logger.warning(
-                                "Can't find snapshots folder!", self)
+                            logger.error('Snapshots directory not '
+                                         'accessible. Tries stopped.',
+                                         self)
                             # Can't find snapshots directory (is it on a
                             # removable drive ?)
                             self.config.PLUGIN_MANAGER.error(3)
@@ -891,8 +884,10 @@ class Snapshots:
                             sid = SID(now, self.config)
 
                             if sid.exists():
-                                logger.warning(f'Snapshot path "{sid.path()}" '
-                                               'already exists', self)
+                                logger.warning(
+                                    f'Snapshot directory "{sid.path()}" '
+                                    'already exists',
+                                    self)
                                 # This snapshot already exists
                                 self.config.PLUGIN_MANAGER.error(4, sid)
 
@@ -951,7 +946,8 @@ class Snapshots:
 
                             if not ret_error:
                                 self.freeSpace(now)
-                                self.setTakeSnapshotMessage(0, _('Finalizing'))
+                                self.setTakeSnapshotMessage(
+                                    0, _('Please be patient. Finalizing…'))
 
                         time.sleep(2)
                         sleep = False
@@ -968,9 +964,6 @@ class Snapshots:
                         time.sleep(2)
                         sleep = False
 
-                    if not ret_error:
-                        self.clearTakeSnapshotMessage()
-
                     # unmount
                     try:
                         mount.Mount(cfg=self.config) \
@@ -979,8 +972,10 @@ class Snapshots:
                     except MountException as ex:
                         logger.error(str(ex), self)
 
+                    if not ret_error:
+                        self.clearTakeSnapshotMessage()
+
                     instance.exitApplication()
-                    # self.flockRelease()
 
                     logger.info('Unlock', self)
                     # --- END GlobalFlock context ---
@@ -2047,13 +2042,12 @@ class Snapshots:
                base_sid,
                base_path,
                snapshotsList,
-               list_diff_only  = False,
-               flag_deep_check = False,
-               list_equal_to = ''):
-        """
-        Filter snapshots from ``snapshotsList`` based on whether ``base_path``
-        file is included and optional if the snapshot is unique or equal to
-        ``list_equal_to``.
+               list_diff_only=False,
+               flag_deep_check=False,
+               list_equal_to=''):
+        """Filter snapshots from ``snapshotsList`` based on whether
+        ``base_path`` file is included and optional if the snapshot is unique
+        or equal to ``list_equal_to``.
 
         Args:
             base_sid (SID):         snapshot ID that contained the original
@@ -2082,7 +2076,7 @@ class Snapshots:
         allSnapshotsList = [RootSnapshot(self.config)]
         allSnapshotsList.extend(snapshotsList)
 
-        #links
+        # links
         if os.path.islink(base_full_path):
             targets = []
 
@@ -2090,45 +2084,60 @@ class Snapshots:
                 path = sid.pathBackup(base_path)
 
                 if os.path.lexists(path) and os.path.islink(path):
+
                     if list_diff_only:
                         target = os.readlink(path)
+
                         if target in targets:
                             continue
+
                         targets.append(target)
+
                     snapshotsFiltered.append(sid)
 
             return snapshotsFiltered
 
-        #directories
+        # directories
         if os.path.isdir(base_full_path):
+
             for sid in allSnapshotsList:
                 path = sid.pathBackup(base_path)
 
-                if os.path.exists(path) and not os.path.islink(path) and os.path.isdir(path):
+                if (os.path.exists(path)
+                        and not os.path.islink(path)
+                        and os.path.isdir(path)):
                     snapshotsFiltered.append(sid)
 
             return snapshotsFiltered
 
-        #files
+        # files
         if not list_diff_only and not list_equal_to:
+
             for sid in allSnapshotsList:
                 path = sid.pathBackup(base_path)
 
-                if os.path.exists(path) and not os.path.islink(path) and os.path.isfile(path):
+                if (os.path.exists(path)
+                        and not os.path.islink(path)
+                        and os.path.isfile(path)):
                     snapshotsFiltered.append(sid)
 
             return snapshotsFiltered
 
         # check for duplicates
-        uniqueness = tools.UniquenessSet(flag_deep_check, follow_symlink = False, list_equal_to = list_equal_to)
+        uniqueness = UniquenessSet(
+            flag_deep_check, follow_symlink=False, list_equal_to=list_equal_to)
+
         for sid in allSnapshotsList:
             path = sid.pathBackup(base_path)
-            if os.path.exists(path) and not os.path.islink(path) and os.path.isfile(path) and uniqueness.check(path):
+
+            if (os.path.exists(path)
+                    and not os.path.islink(path)
+                    and os.path.isfile(path)
+                    and uniqueness.check(path)):
                 snapshotsFiltered.append(sid)
 
         return snapshotsFiltered
 
-    #TODO: move this to config.Config -> Don't!
     def rsyncRemotePath(self, path, use_mode = ['ssh', 'ssh_encfs'], quote = '"'):
         """
         Format the destination string for rsync depending on which profile is
@@ -2226,109 +2235,151 @@ class Snapshots:
             logger.error('Failed to create symlink %s: %s' %(symlink, str(e)), self)
             return False
 
-    def rsyncSuffix(self, includeFolders = None, excludeFolders = None):
-        """
-        Create suffixes for rsync.
+    def rsyncSuffix(self, includeFolders=None, excludeFolders=None):
+        """Create suffixes for rsync.
 
         Args:
-            includeFolders (list):  folders to include. list of tuples (item, int)
-                                    Where ``int`` is ``0`` if ``item`` is a
-                                    folder or ``1`` if ``item`` is a file
-            excludeFolders (list):  list of folders to exclude
+            includeFolders (list): Folders to include. list of tuples (item,
+                int). Where ``int`` is ``0`` if ``item`` is a folder or ``1``
+                if ``item`` is a file.
+            excludeFolders (list):  List of folders to exclude.
 
         Returns:
-            list:                   rsync include and exclude options
+            (list): Rsync include and exclude options.
         """
-        #create exclude patterns string
+        # Create exclude patterns string
         rsync_exclude = self.rsyncExclude(excludeFolders)
 
-        #create include patterns list
+        # Create include patterns list
         rsync_include, rsync_include2 = self.rsyncInclude(includeFolders)
 
         encode = self.config.ENCODE
+
         ret = ['--chmod=Du+wx']
-        ret.extend(['--exclude=' + i for i in (encode.exclude(self.config.snapshotsPath()),
-                                               encode.exclude(self.config._LOCAL_DATA_FOLDER),
-                                               encode.exclude(self.config._MOUNT_ROOT)
-                                               )])
+        ret.extend([
+            '--exclude=' + i for i in (
+                encode.exclude(self.config.snapshotsPath()),
+                encode.exclude(self.config._LOCAL_DATA_FOLDER),
+                encode.exclude(self.config._MOUNT_ROOT)
+            )
+        ])
         # TODO: fix bug #561:
-        # after rsync_exclude we need to explicitly include files inside excluded
-        # folders, recursive exclude folder-content again and finally add the
-        # rest from rsync_include2
+        # after rsync_exclude we need to explicitly include files inside
+        # excluded folders, recursive exclude folder-content again and finally
+        # add the rest from rsync_include2
         ret.extend(rsync_include)
         ret.extend(rsync_exclude)
         ret.extend(rsync_include2)
         ret.append('--exclude=*')
         ret.append(encode.chroot)
+
         return ret
 
-    def rsyncExclude(self, excludeFolders = None):
-        """
-        Format exclude list for rsync
+    def rsyncExclude(self, excludeFolders=None):
+        """Format exclude list for rsync.
+
+        See `rsyncInclude()` for more details.
 
         Args:
-            excludeFolders (list):  list of folders to exclude
+            excludeFolders (list): List of folders to exclude.
 
         Returns:
-            OrderedSet:             rsync exclude options
+            (list): Rsync exclude options.
         """
-        items = tools.OrderedSet()
+        items = []
         encode = self.config.ENCODE
+
         if excludeFolders is None:
             excludeFolders = self.config.exclude()
 
         for exclude in excludeFolders:
             exclude = encode.exclude(exclude)
+
             if exclude is None:
                 continue
-            items.add('--exclude=' + exclude)
+
+            items.append(f'--exclude={exclude}')
+
         return items
 
-    def rsyncInclude(self, includeFolders = None):
-        """
-        Format include list for rsync. Returns a tuple of two include strings.
-        First string need to come before exclude, second after exclude.
+    def rsyncInclude(self, includeFolders=None):
+        """Format include list for rsync.
+
+        Returns two lists of include strings. First string need to come
+        before exclude, second after exclude.
 
         Args:
-            includeFolders (list):  folders to include. list of
-                                    tuples (item, int) where ``int`` is ``0``
-                                    if ``item`` is a folder or ``1`` if ``item``
-                                    is a file
+            includeFolders (list): Folders to include. List of tuples
+                (item, int) where ``int`` is ``0`` if ``item`` is a folder
+                or ``1`` if ``item`` is a file.
 
         Returns:
-            tuple:                  two item tuple of
-                                    ``(OrderedSet('include1 opions'),
-                                    OrderedSet('include2 options'))``
+            (tuple): Two item tuple with two lists.
         """
-        items1 = tools.OrderedSet()
-        items2 = tools.OrderedSet()
+        # Include items..
+        # ...before the exclude items and...
+        before = []
+        # ...after the exclude items
+        after = []
+
+        # Except for EncFS profiles this does nothing
         encode = self.config.ENCODE
+
         if includeFolders is None:
             includeFolders = self.config.include()
 
         for include_folder in includeFolders:
             folder = include_folder[0]
 
-            if folder == "/":	# If / is selected as included folder it should be changed to ""
-                #folder = ""	# because an extra / is added below. Patch thanks to Martin Hoefling
-                items2.add('--include=/')
-                items2.add('--include=/**')
+            # If / is selected as included folder it should be changed to ""
+            if folder == "/":
+                # folder = ""  # because an extra / is added below.
+                               # Patch thanks to Martin Hoefling
+
+                after.append('--include=/')
+                after.append('--include=/**')
                 continue
 
             folder = encode.include(folder)
+
+            # Folder(0) or file(1)
             if include_folder[1] == 0:
-                items2.add('--include={}/**'.format(folder))
+                after.append('--include={}/**'.format(folder))
             else:
-                items2.add('--include={}'.format(folder))
+                after.append('--include={}'.format(folder))
                 folder = os.path.split(folder)[0]
 
             while True:
                 if len(folder) <= 1:
                     break
-                items1.add('--include={}/'.format(folder))
+                before.append('--include={}/'.format(folder))
                 folder = os.path.split(folder)[0]
 
-        return (items1, items2)
+        # buhtz 2024-07-17:
+        # It is not clear to me why here are two lists generated. But I tested
+        # with this include entries:
+        #     folder: /home/user/Downloads
+        #     file: /home/user/mbox
+        #     file: /home/user/notizen
+        #     file: /home/user/mylock
+        #     folder: /home/user/foo
+        # And this is the result:
+        #
+        #    items1=OrderedSet([
+        #        '--include=/home/user/Downloads/',
+        #        '--include=/home/user/',
+        #        '--include=/home/',
+        #        '--include=/home/user/foo/'
+        #    ])
+        #    items2=OrderedSet([
+        #        '--include=/home/user/Downloads/**',
+        #        '--include=/home/user/mbox',
+        #        '--include=/home/user/notizen',
+        #        '--include=/home/user/mylock',
+        #        '--include=/home/user/foo/**'
+        #    ])
+
+        return (before, after)
 
 
 class FileInfoDict(dict):
@@ -2353,7 +2404,7 @@ class FileInfoDict(dict):
         super(FileInfoDict, self).__setitem__(key, value)
 
 
-class SID(object):
+class SID:
     """
     Snapshot ID object used to gather all information for a snapshot
 

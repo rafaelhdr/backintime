@@ -18,18 +18,16 @@ import os
 import time
 import atexit
 import signal
-import subprocess
-import re
-import errno
 import config
 import configfile
 import tools
+import daemon
 import password_ipc
 import logger
 from exceptions import Timeout
 
 
-class Password_Cache(tools.Daemon):
+class Password_Cache(daemon.Daemon):
     """
     Password_Cache get started on User login. It provides passwords for
     BIT cronjobs because keyring is not available when the User is not
@@ -76,31 +74,41 @@ class Password_Cache(tools.Daemon):
         atexit.register(self.fifo.delfifo)
         signal.signal(signal.SIGHUP, self.reloadHandler)
         logger.debug('Start loop', self)
+
         while True:
             try:
                 request = self.fifo.read()
                 request = request.split('\n')[0]
                 task, value = request.split(':', 1)
+
                 if task == 'get_pw':
                     key = value
+
                     if key in list(self.dbKeyring.keys()):
                         answer = 'pw:' + self.dbKeyring[key]
                     elif key in list(self.dbUsr.keys()):
                         answer = 'pw:' + self.dbUsr[key]
                     else:
                         answer = 'none:'
+
                     self.fifo.write(answer, 5)
+
                 elif task == 'set_pw':
                     key, value = value.split(':', 1)
                     self.dbUsr[key] = value
 
             except IOError as e:
                 logger.error('Error in writing answer to FIFO: %s' % str(e), self)
+
             except KeyboardInterrupt:
                 logger.debug('Quit.', self)
                 break
+
             except Timeout:
+                # That exception is thrown by tools.Alarm.handle() if the
+                # timeout ends. That Alarm was set by FIFO.read().
                 logger.error('FIFO timeout', self)
+
             except Exception as e:
                 logger.error('ERROR: %s' % str(e), self)
 
@@ -149,10 +157,12 @@ class Password_Cache(tools.Daemon):
         self.fifo.delfifo()
         super(Password_Cache, self).cleanupHandler(signum, frame)
 
-class Password(object):
+
+class Password:
     """Provide passwords for BIT either from keyring, Password_Cache or
     by asking user.
     """
+
     def __init__(self, cfg=None):
         self.config = cfg
 
@@ -165,9 +175,15 @@ class Password(object):
 
         self.keyringSupported = tools.keyringSupported()
 
-    def password(self, parent, profile_id, mode, pw_id=1, only_from_keyring=False):
+    def password(self,
+                 parent,
+                 profile_id,
+                 mode,
+                 pw_id=1,
+                 only_from_keyring=False,
+                 refresh=False):
         """
-        based on profile settings return password from keyring,
+        Based on profile settings return password from keyring,
         Password_Cache or by asking User.
         """
         if not self.config.modeNeedPassword(mode, pw_id):
@@ -178,32 +194,34 @@ class Password(object):
         user_name = self.config.keyringUserName(profile_id)
 
         try:
-            return self.db['%s/%s' %(service_name, user_name)]
+            return self.db['%s/%s' % (service_name, user_name)]
 
         except KeyError:
             pass
 
         password = ''
 
-        if self.config.passwordUseCache(profile_id) and not only_from_keyring:
+        if (self.config.passwordUseCache(profile_id)
+                and not only_from_keyring
+                and not refresh):
             # From cache
             password = self.passwordFromCache(service_name, user_name)
 
-            if not password is None:
+            if password is not None:
                 self.setPasswordDb(service_name, user_name, password)
 
                 return password
 
-        if self.config.passwordSave(profile_id):
+        if self.config.passwordSave(profile_id) and not refresh:
             # From keyring
             password = self.passwordFromKeyring(service_name, user_name)
 
-            if not password is None:
+            if password is not None:
                 self.setPasswordDb(service_name, user_name, password)
 
                 return password
 
-        if not only_from_keyring:
+        if refresh or not only_from_keyring:
             # Ask user and write to cache
             password = self.passwordFromUser(parent, profile_id, mode, pw_id)
 
