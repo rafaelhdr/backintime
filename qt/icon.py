@@ -71,9 +71,11 @@ SNAPSHOT_NAME       = QIcon.fromTheme('stock_edit',
 REMOVE_SNAPSHOT     = QIcon.fromTheme('edit-delete')
 VIEW_SNAPSHOT_LOG   = QIcon.fromTheme('text-plain',
                       QIcon.fromTheme('text-x-generic'))
-VIEW_LAST_LOG       = QIcon.fromTheme('document-open-recent')  # 'document-open-recent')  # ('document-new')
+VIEW_LAST_LOG       = QIcon.fromTheme('document-open-recent')
 SETTINGS            = QIcon.fromTheme('gtk-preferences',
-                      QIcon.fromTheme('configure'))
+                      QIcon.fromTheme('configure',
+                      # Free Desktop Icon Naming Specification
+                      QIcon.fromTheme('preferences-system')))
 SHUTDOWN            = QIcon.fromTheme('system-shutdown')
 EXIT                = QIcon.fromTheme('gtk-close',
                       QIcon.fromTheme('application-exit'))
@@ -93,7 +95,7 @@ ABOUT               = QIcon.fromTheme('help-about')
 #Files toolbar
 UP                  = QIcon.fromTheme('go-up')
 SHOW_HIDDEN         = QIcon.fromTheme('view-hidden',  # currently only in Breeze (see #1159)
-                      QIcon.fromTheme('show-hidden',  # icon installed with BiT!
+                      QIcon.fromTheme('show-hidden',  # icon installed with # BiT! #507
                       QIcon.fromTheme('list-add')))
 RESTORE             = QIcon.fromTheme('edit-undo')
 RESTORE_TO          = QIcon.fromTheme('document-revert')

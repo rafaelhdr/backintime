@@ -844,7 +844,7 @@ class Snapshots:
                                     and self.config.notify()):
 
                                 message = (
-                                    _("Can't find snapshots folder.\n"
+                                    _("Can't find snapshots directory.\n"
                                       "If it is on a removable drive please "
                                       "plug it in.")
                                     + '\n'
@@ -862,15 +862,12 @@ class Snapshots:
                                 'Cannot start snapshot yet: target directory '
                                 'not accessible. Will retry each second in '
                                 'the next 30 seconds. Please wait.')
-
-                            counter = 0
-                            for counter in range(0, 30):
+                            for _idx in range(30):
 
                                 time.sleep(1)
 
                                 if self.config.canBackup():
                                     break
-
                         if not self.config.canBackup(profile_id):
                             logger.error('Snapshots directory not '
                                          'accessible. Tries stopped.',
@@ -1074,11 +1071,11 @@ class Snapshots:
             bool:       ``True`` if successful
         """
         if not tools.makeDirs(path):
-            logger.error(f"Can't create folder: {path}", self)
+            logger.error(f"Can't create directory: {path}", self)
             self.setTakeSnapshotMessage(
                 1,
                 '{}: {}'.format(
-                    _("Can't create folder"),
+                    _("Can't create directory."),
                     path)
             )
             time.sleep(2)  # max 1 backup / second
@@ -1238,7 +1235,7 @@ class Snapshots:
                             dict of: {path: (permission, user, group)}
                             Using sideefect on changing dict item will change
                             original dict, too.
-            path (bytes):   full path to file or folder
+            path (bytes): Full path to file or directory.
         """
         assert isinstance(path, bytes), 'path is not bytes type: %s' % path
         if path and os.path.exists(path):
@@ -1283,12 +1280,13 @@ class Snapshots:
         # instead, e.g. a DataClass
 
         if new_snapshot.exists() and new_snapshot.saveToContinue:
-            logger.info(f"Found leftover '{new_snapshot.displayID}' which "
-                        "can be continued.", self)
+            logger.info(f"Found leftover snapshot '{new_snapshot.displayID}' "
+                        "that can be continued.", self)
 
             self.setTakeSnapshotMessage(
                 0,
-                _('Found leftover {snapshot_id} which can be continued.')
+                _('Found leftover snapshot {snapshot_id} '
+                  'that can be continued.')
                 .format(snapshot_id=new_snapshot.displayID)
             )
 
@@ -1306,22 +1304,22 @@ class Snapshots:
             params[1] = new_snapshot.hasChanges
 
         elif new_snapshot.exists() and not new_snapshot.saveToContinue:
-            logger.info(f'Remove leftover {new_snapshot.displayID} folder '
-                        'from last run')
+            logger.info(f'Removing leftover snapshot {new_snapshot.displayID} '
+                        'directory from last run')
 
             self.setTakeSnapshotMessage(
                 0,
-                _('Removing leftover {snapshot_id} folder from last run')
+                _('Removing leftover {snapshot_id} directory from last run')
                 .format(snapshot_id=new_snapshot.displayID)
             )
             self.remove(new_snapshot)
 
             if os.path.exists(new_snapshot.path()):
                 logger.error(
-                    f"Can't remove folder: {new_snapshot.path()}", self)
+                    f"Can't remove directory: {new_snapshot.path()}", self)
                 self.setTakeSnapshotMessage(
                     1,
-                    '{}: {}'.format(_("Can't remove folder"),
+                    '{}: {}'.format(_("Can't remove directory"),
                                     new_snapshot.path())
                 )
                 time.sleep(2)  # max 1 backup / second
@@ -1519,7 +1517,7 @@ class Snapshots:
 
             self.setTakeSnapshotMessage(
                 1,
-                _("Can't rename {new_path} to {path}")
+                _('Unable to rename {new_path} to {path}.')
                 .format(new_path=new_snapshot.path(), path=sid.path())
             )
             time.sleep(2)  # max 1 backup / second
@@ -1775,13 +1773,13 @@ class Snapshots:
 
             maxLength = self.config.sshMaxArgLength()
             if not maxLength:
-                import sshMaxArg
+                import ssh_max_arg
                 user_host = '%s@%s' % (self.config.sshUser(),
                                        self.config.sshHost())
-                maxLength = sshMaxArg.probe_max_ssh_command_size(self.config)
+                maxLength = ssh_max_arg.probe_max_ssh_command_size(self.config)
                 self.config.setSshMaxArgLength(maxLength)
                 self.config.save()
-                sshMaxArg.report_result(user_host, maxLength)
+                ssh_max_arg.report_result(user_host, maxLength)
 
             additionalChars = len(self.config.sshPrefixCmd(cmd_type = str))
 
@@ -2996,7 +2994,7 @@ class NewSnapshot(GenericNonSnapshot):
         flag = self.path(self.SAVETOCONTINUE)
         if enable:
             try:
-                with open(flag, 'wt') as f:
+                with open(flag, 'wt'):
                     pass
             except Exception as e:
                 logger.error("Failed to set 'save_to_continue' flag: %s" %str(e)) # should be "safe", throughout
