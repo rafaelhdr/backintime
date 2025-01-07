@@ -694,12 +694,12 @@ class Snapshots:
 
     def _check_included_sources_exist_on_take_snapshot(self, config):
         """
-        Check if files and/or folders in the include list exist on the source.
+        Check if files and/or directories in the include list exist on the source.
 
-        If a file or folder does not exist, a warning message is logged.
+        If a file or directory does not exist, a warning message is logged.
 
         Args:
-            cfg (config.Config): config that should be used
+            cfg (config.Config): Config that should be used.
         """
         missing = has_missing_includes(config.include())
 
