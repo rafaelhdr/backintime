@@ -705,7 +705,7 @@ class Snapshots:
 
         if missing:
             msg = ', '.join(missing)
-            msg = f'The following **files/**folders are missing: {msg}'
+            msg = f'The following files/folders are missing: {msg}'
             logger.warning(msg)
             self.setTakeSnapshotMessage(1, msg)
 
@@ -3167,7 +3167,7 @@ def has_missing_includes(included):
                             describing the missing files or folders
     """
     not_found = []
-    for path, info in included:
+    for path, _ in included:
         if not os.path.exists(path):
             not_found.append(path)
     return not_found
