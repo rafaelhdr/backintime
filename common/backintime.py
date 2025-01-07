@@ -1,20 +1,13 @@
-#    Back In Time
-#    Copyright (C) 2008-2022 Oprea Dan, Bart de Koning, Richard Bailey, Germar Reitze
+# SPDX-FileCopyrightText: © 2008-2022 Oprea Dan
+# SPDX-FileCopyrightText: © 2008-2022 Bart de Koning
+# SPDX-FileCopyrightText: © 2008-2022 Richard Bailey
+# SPDX-FileCopyrightText: © 2008-2022 Germar Reitze
 #
-#    This program is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation; either version 2 of the License, or
-#    (at your option) any later version.
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License along
-#    with this program; if not, write to the Free Software Foundation, Inc.,
-#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+# This file is part of the program "Back In Time" which is released under GNU
+# General Public License v2 (GPLv2). See LICENSES directory or go to
+# <https://spdx.org/licenses/GPL-2.0-or-later.html>.
 import os
 import sys
 import argparse
@@ -28,7 +21,6 @@ import tools
 # Workaround for situations where startApp() is not invoked.
 # E.g. when using --diagnostics and other argparse.Action
 tools.initiate_translation(None)
-
 import config
 import logger
 import snapshots
@@ -37,6 +29,7 @@ import mount
 import password
 import encfstools
 import cli
+from statedata import StateData
 from diagnostics import collect_diagnostics, collect_minimal_diagnostics
 from exceptions import MountException
 from applicationinstance import ApplicationInstance
@@ -49,7 +42,7 @@ RETURN_NO_CFG = 2
 parsers = {}
 
 
-def takeSnapshotAsync(cfg, checksum = False):
+def takeSnapshotAsync(cfg, checksum=False):
     """
     Fork a new backintime process with 'backup' command which will
     take a new snapshot in background.
@@ -84,7 +77,7 @@ def takeSnapshotAsync(cfg, checksum = False):
     subprocess.Popen(cmd, env = env)
 
 
-def takeSnapshot(cfg, force = True):
+def takeSnapshot(cfg, force=True):
     """
     Take a new snapshot.
 
@@ -130,7 +123,7 @@ def _umount(cfg):
         logger.error(str(ex))
 
 
-def createParsers(app_name = 'backintime'):
+def createParsers(app_name='backintime'):
     """
     Define parsers for commandline arguments.
 
@@ -533,6 +526,9 @@ def startApp(app_name='backintime'):
             f"{config.Config.APP_NAME}. This will cause some trouble. "
             f"Please use either 'sudo -i {app_name}' or 'pkexec {app_name}'.")
 
+    # State data
+    load_state_data(args)
+
     # Call commands
     if 'func' in dir(args):
         args.func(args)
@@ -687,7 +683,7 @@ def aliasParser(args):
         newArgs.func(newArgs)
 
 
-def getConfig(args, check = True):
+def getConfig(args, check=True):
     """
     Load config and change to profile selected on commandline.
 
@@ -731,6 +727,175 @@ def getConfig(args, check = True):
     return cfg
 
 
+def _get_state_data_from_config(cfg: config.Config) -> StateData:
+    """Get data related to application state from the config instance.
+
+    It migrates state data from the config file to an instance of
+    `StateData` which later is saved in a separate file.
+
+    This function is a temporary workaround. See PR #1850.
+
+    Args:
+       cfg: The config instance.
+
+    Returns:
+        dict: The state data.
+        """
+
+    data = StateData()
+
+    # internal.manual_starts_countdown
+    data['manual_starts_countdown'] \
+        = cfg.intValue('internal.manual_starts_countdown', 10)
+
+    # internal.msg_rc
+    val = cfg.strValue('internal.msg_rc', None)
+    if val:
+        data.msg_release_candidate = val
+
+    # internal.msg_shown_encfs
+    val = cfg.boolValue('internal.msg_shown_encfs', None)
+    if val:
+        data.msg_encfs_global = val
+
+    # qt.show_hidden_files
+    data.mainwindow_show_hidden = cfg.boolValue('qt.show_hidden_files', False)
+
+    # Coordinates and dimensions
+    val = (
+        cfg.intValue('qt.main_window.x', None),
+        cfg.intValue('qt.main_window.y', None)
+    )
+    if all(val):
+        data.mainwindow_coords = val
+
+    val = (
+        cfg.intValue('qt.main_window.width', None),
+        cfg.intValue('qt.main_window.height', None)
+    )
+    if all(val):
+        data.mainwindow_dims = val
+
+    val = (
+        cfg.intValue('qt.logview.width', None),
+        cfg.intValue('qt.logview.height', None)
+    )
+    if all(val):
+        data.logview_dims = val
+
+    # files view
+    # Dev note (buhtz, 2024-12): Ignore the column width values because of a
+    # bug. Three columns are tracked but the widget has four columns. The "Typ"
+    # column is treated as "Date" and the width of the real "Date" column (4th)
+    # was never stored.
+    # The new state file will load and store width values for all existing
+    # columns.
+    # qt.main_window.files_view.name_width
+    # qt.main_window.files_view.size_width
+    # qt.main_window.files_view.date_width
+
+    col = cfg.intValue('qt.main_window.files_view.sort.column', 0)
+    order = cfg.boolValue('qt.main_window.files_view.sort.ascending', True)
+    data.files_view_sorting = (col, 0 if order else 1)
+
+    # splitter width
+    widths = (
+        cfg.intValue('qt.main_window.main_splitter_left_w', None),
+        cfg.intValue('qt.main_window.main_splitter_right_w', None)
+    )
+    if all(widths):
+        data.mainwindow_main_splitter_widths = widths
+
+    widths = (
+        cfg.intValue('qt.main_window.second_splitter_left_w', None),
+        cfg.intValue('qt.main_window.second_splitter_right_w', None)
+    )
+    if all(widths):
+        data.mainwindow_second_splitter_widths = widths
+
+    # each profile
+    for profile_id in cfg.profiles():
+        profile_state = data.profile(profile_id)
+
+        # profile specific encfs warning
+        val = cfg.profileBoolValue('msg_shown_encfs', None, profile_id)
+        if val is not None:
+            profile_state.msg_encfs = val
+
+        # qt.last_path
+        if cfg.hasProfileKey('qt.last_path', profile_id):
+            profile_state.last_path \
+                = cfg.profileStrValue('qt.last_path', None, profile_id)
+
+        # Places: sorting
+        sorting = (
+            cfg.profileIntValue('qt.places.SortColumn', None, profile_id),
+            cfg.profileIntValue('qt.places.SortOrder', None, profile_id)
+        )
+        if all(sorting):
+            profile_state.places_sorting = sorting
+
+        # Manage profiles - Exclude tab: sorting
+        sorting = (
+            cfg.profileIntValue(
+                'qt.settingsdialog.exclude.SortColumn', None, profile_id),
+            cfg.profileIntValue(
+                'qt.settingsdialog.exclude.SortOrder', None, profile_id)
+        )
+        if all(sorting):
+            profile_state.exclude_sorting = sorting
+
+        # Manage profiles - Include tab: sorting
+        sorting = (
+            cfg.profileIntValue(
+                'qt.settingsdialog.include.SortColumn', None, profile_id),
+            cfg.profileIntValue(
+                'qt.settingsdialog.include.SortOrder', None, profile_id)
+        )
+        if all(sorting):
+            profile_state.include_sorting = sorting
+
+    return data
+
+
+def load_state_data(args: argparse.Namespace) -> None:
+    """Initiate the `State` instance.
+
+    The state file is loaded and its data stored in `State`. The later is a
+    singleton and can be used everywhere.
+
+    Dev note (buhtz, 2024-12): The args argument is a workaround and will be
+    removed. Currently it is needed to know where to load the config file
+    from. Related to PR #1850. In the future that function can be moved into
+    the StateData class as load() method.
+
+    Args:
+       args: Arguments given from command line.
+    """
+    fp = StateData.file_path()
+
+    try:
+        # load file
+        state_data = StateData(json.loads(fp.read_text(encoding='utf-8')))
+
+    except FileNotFoundError:
+        logger.debug('State file not found. Using config file and migrate it'
+                     'into a state file.')
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        # extract data from the config file (for migration)
+        state_data = _get_state_data_from_config(getConfig(args))
+
+    except json.decoder.JSONDecodeError as exc:
+        logger.warning(f'Unable to read and decode state file "{fp}". '
+                       'Ignnoring it.')
+        logger.debug(f'{exc=}')
+        # Empty state data with default values
+        state_data = StateData()
+
+    # Register close callback. This will save the state file when the BIT ends.
+    atexit.register(state_data.save)
+
+
 def setQuiet(args):
     """
     Redirect :py:data:`sys.stdout` to ``/dev/null`` if ``--quiet`` was set on
@@ -757,6 +922,7 @@ class printLicense(argparse.Action):
     """
     Print custom license
     """
+
     def __init__(self, *args, **kwargs):
         super(printLicense, self).__init__(*args, **kwargs)
 
@@ -785,7 +951,7 @@ class printDiagnostics(argparse.Action):
         sys.exit(RETURN_OK)
 
 
-def backup(args, force = True):
+def backup(args, force=True):
     """
     Command for force taking a new snapshot.
 
@@ -840,12 +1006,14 @@ def shutdown(args):
     cfg = getConfig(args)
 
     sd = tools.ShutDown()
+
     if not sd.canShutdown():
         logger.warning('Shutdown is not supported.')
         sys.exit(RETURN_ERR)
 
     instance = ApplicationInstance(cfg.takeSnapshotInstanceFile(), False)
     profile = '='.join((cfg.currentProfile(), cfg.profileName()))
+
     if not instance.busy():
         logger.info('There is no active snapshot for profile %s. Skip shutdown.'
                     %profile)
@@ -854,15 +1022,19 @@ def shutdown(args):
     print('Shutdown is waiting for the snapshot in profile %s to end.\nPress CTRL+C to interrupt shutdown.\n'
           %profile)
     sd.activate_shutdown = True
+
     try:
         while instance.busy():
             logger.debug('Snapshot is still active. Wait for shutdown.')
             sleep(5)
+
     except KeyboardInterrupt:
         print('Shutdown interrupted.')
+
     else:
         logger.info('Shutdown now.')
         sd.shutdown()
+
     sys.exit(RETURN_OK)
 
 
@@ -1115,7 +1287,7 @@ def decode(args):
     sys.exit(RETURN_OK)
 
 
-def remove(args, force = False):
+def remove(args, force=False):
     """
     Command for removing snapshots.
 

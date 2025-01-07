@@ -447,27 +447,6 @@ class Config(configfile.ConfigFileWithProfiles):
     def setLanguage(self, language: str):
         self.setStrValue('global.language', language if language else '')
 
-    def manual_starts_countdown(self) -> int:
-        """Countdown value about how often the users started the Back In Time
-        GUI.
-
-        It is an internal variable not meant to be used or manipulated be the
-        users. At the end of the countown the
-        :py:class:`ApproachTranslatorDialog` is presented to the user.
-
-        """
-        return self.intValue('internal.manual_starts_countdown', 10)
-
-    def decrement_manual_starts_countdown(self):
-        """Counts down to -1.
-
-        See :py:func:`manual_starts_countdown()` for details.
-        """
-        val = self.manual_starts_countdown()
-
-        if val > -1:
-            self.setIntValue('internal.manual_starts_countdown', val - 1)
-
     # SSH
     def sshSnapshotsPath(self, profile_id = None):
         #?Snapshot path on remote host. If the path is relative (no leading '/')
@@ -986,7 +965,7 @@ class Config(configfile.ConfigFileWithProfiles):
                 self.profileIntValue('snapshots.min_free_space.unit', self.DISK_UNIT_GB, profile_id))
 
     def minFreeSpaceEnabled(self, profile_id = None):
-        return self.profileBoolValue('snapshots.min_free_space.enabled', True, profile_id)
+        return self.profileBoolValue('snapshots.min_free_space.enabled', False, profile_id)
 
     def minFreeSpaceMib(self, profile_id = None):
         enabled, value, unit = self.minFreeSpace(profile_id)
@@ -1014,7 +993,7 @@ class Config(configfile.ConfigFileWithProfiles):
     def minFreeInodesEnabled(self, profile_id = None):
         #?Remove snapshots until \fIprofile<N>.snapshots.min_free_inodes.value\fR
         #?free inodes in % is reached.
-        return self.profileBoolValue('snapshots.min_free_inodes.enabled', True, profile_id)
+        return self.profileBoolValue('snapshots.min_free_inodes.enabled', False, profile_id)
 
     def setMinFreeInodes(self, enabled, value, profile_id = None):
         self.setProfileBoolValue('snapshots.min_free_inodes.enabled', enabled, profile_id)
